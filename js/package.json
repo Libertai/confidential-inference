@@ -31,8 +31,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "bin": {
-    "libertai-confidential": "./dist/cli.js"
   }
 }

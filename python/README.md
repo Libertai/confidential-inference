@@ -72,10 +72,3 @@ Use `connect(item_hash=...)` to pin one deployment and skip discovery entirely.
 
 Hashing, signature recovery and report verification live in a Rust core shared
 with the JavaScript client, so there is nothing for the two to disagree about.
-
-## CLI
-
-```bash
-libertai-confidential               # what is published
-libertai-confidential qwen3.8-27b   # verify and report
-```

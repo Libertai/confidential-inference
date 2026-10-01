@@ -84,13 +84,6 @@ running enclave that no longer exists.
 
 Use `connect({ itemHash })` to pin one deployment and skip discovery entirely.
 
-## CLI
-
-```bash
-npx @libertai/confidential-inference               # what is published
-npx @libertai/confidential-inference qwen3.8-27b   # verify and report
-```
-
 ## One implementation of the checks
 
 Hashing, signature recovery and report verification live in a Rust core

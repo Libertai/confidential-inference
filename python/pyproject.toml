@@ -11,9 +11,6 @@ license = { text = "MIT" }
 requires-python = ">=3.9"
 dependencies = ["httpx>=0.27"]
 
-[project.scripts]
-libertai-confidential = "libertai_confidential.cli:main"
-
 [tool.maturin]
 features = ["pyo3/extension-module"]
 module-name = "libertai_confidential._core"
