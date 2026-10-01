@@ -26,6 +26,12 @@ from .verify import AttestationError, TcbFloor, verify_certificate
 __all__ = ["attested_ssl_context", "attested_client"]
 
 
+#: How long one address may take to answer before the next candidate is tried.
+#: A deployment publishes an IPv4 port mapping and an IPv6 address, and an
+#: address that cannot be reached from here does not fail -- it goes quiet.
+CONNECT_TIMEOUT = 8.0
+
+
 def _peer_certificate(host: str, port: int, timeout: float) -> bytes:
     """Take the certificate without trusting it; judging it comes next."""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -57,7 +63,7 @@ def attested_ssl_context(
     measurements: Sequence[str],
     *,
     tcb_floor: Optional[TcbFloor] = None,
-    timeout: float = 30.0,
+    timeout: float = CONNECT_TIMEOUT,
     client: Optional[httpx.Client] = None,
 ) -> Tuple[ssl.SSLContext, str]:
     """Verify the peer at ``origin`` and return a context pinned to it, along

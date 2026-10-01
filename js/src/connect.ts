@@ -17,7 +17,18 @@ import { AttestationError, verifyCertificate, type VerifyOptions } from "./verif
 export interface TransportOptions extends VerifyOptions {
   /** Called with the launch measurement each new connection proved. */
   onVerified?: (measurement: string, host: string) => void;
+  /**
+   * How long one address may take to answer before the next is tried.
+   *
+   * A deployment publishes an IPv4 port mapping and an IPv6 address, and an
+   * address that cannot be reached from here does not fail -- it goes quiet.
+   * Left to the operating system that costs over a minute per address, so
+   * candidates are given a deadline instead.
+   */
+  connectTimeoutMs?: number;
 }
+
+const DEFAULT_CONNECT_TIMEOUT_MS = 8000;
 
 export function confidentialAgent(opts: TransportOptions): Agent {
   return new Agent({
@@ -41,6 +52,14 @@ export function confidentialAgent(opts: TransportOptions): Agent {
         ALPNProtocols: ["http/1.1"],
       });
       opts.signal?.addEventListener("abort", () => socket.destroy(), { once: true });
+
+      socket.setTimeout(opts.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS, () => {
+        socket.destroy();
+        done(new Error(`${host} did not answer in time`), null);
+      });
+      // Past the handshake the deadline belongs to the request, not the socket:
+      // a long completion is not an unreachable peer.
+      socket.once("secureConnect", () => socket.setTimeout(0));
 
       socket.once("secureConnect", () => {
         const der = socket.getPeerCertificate()?.raw;
