@@ -1,0 +1,14 @@
+{
+  "source_repo": "REPLACE-ME: public URL of the repository these images are built from",
+  "models": {
+    "qwen3.8-27b": {
+      "deployments": [
+        {
+          "item_hash": "f45e492aed28a34baa5d7d798e23f1abce76cd4c70e6be3da89110ba2f45f9e0",
+          "source_commit": "b5a6720",
+          "status": "active"
+        }
+      ]
+    }
+  }
+}
