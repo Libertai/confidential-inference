@@ -31,9 +31,13 @@ pub enum VerifyError {
     NoAttestationExtension,
     MalformedExtension(String),
     UnsupportedTeeType(String),
-    ShortReport { len: usize },
+    ShortReport {
+        len: usize,
+    },
     /// The peer is a measured enclave, but not one this release published.
-    MeasurementMismatch { got: String },
+    MeasurementMismatch {
+        got: String,
+    },
     /// The report does not commit to the key the peer served. Without this
     /// check a genuine report can be replayed in front of an attacker's key.
     KeyBindingMismatch,
@@ -43,9 +47,16 @@ pub enum VerifyError {
     /// did not check out.
     Chain(String),
     /// The report comes from a CPU this crate has no AMD roots for.
-    UnknownProduct { family: u8, model: u8 },
+    UnknownProduct {
+        family: u8,
+        model: u8,
+    },
     /// The platform runs firmware older than the caller accepts.
-    TcbTooOld { component: String, got: u8, want: u8 },
+    TcbTooOld {
+        component: String,
+        got: u8,
+        want: u8,
+    },
     /// An Aleph message did not hold up: wrong hash, wrong signer, or
     /// malformed.
     Aleph(String),
@@ -57,12 +68,17 @@ pub enum VerifyError {
 impl core::fmt::Display for VerifyError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::NoAttestationExtension => write!(f, "certificate carries no attestation extension"),
+            Self::NoAttestationExtension => {
+                write!(f, "certificate carries no attestation extension")
+            }
             Self::MalformedExtension(e) => write!(f, "attestation extension is malformed: {e}"),
             Self::UnsupportedTeeType(t) => write!(f, "unsupported TEE type: {t}"),
             Self::ShortReport { len } => write!(f, "attestation report too short: {len} bytes"),
             Self::MeasurementMismatch { got } => {
-                write!(f, "launch measurement {got} is not one this deployment published")
+                write!(
+                    f,
+                    "launch measurement {got} is not one this deployment published"
+                )
             }
             Self::KeyBindingMismatch => {
                 write!(f, "report does not bind the TLS key the peer served")
@@ -70,10 +86,20 @@ impl core::fmt::Display for VerifyError {
             Self::NoPublicKey => write!(f, "certificate carries no public key"),
             Self::Chain(e) => write!(f, "AMD does not endorse this report: {e}"),
             Self::UnknownProduct { family, model } => {
-                write!(f, "no AMD roots for CPU family {family:#x} model {model:#x}")
+                write!(
+                    f,
+                    "no AMD roots for CPU family {family:#x} model {model:#x}"
+                )
             }
-            Self::TcbTooOld { component, got, want } => {
-                write!(f, "platform {component} firmware is {got}, below the required {want}")
+            Self::TcbTooOld {
+                component,
+                got,
+                want,
+            } => {
+                write!(
+                    f,
+                    "platform {component} firmware is {got}, below the required {want}"
+                )
             }
             Self::Aleph(e) => write!(f, "{e}"),
             Self::DebugAllowed => write!(f, "guest policy allows host debugging"),
@@ -97,7 +123,8 @@ pub fn attestation_from_cert(der: &[u8]) -> Result<EmbeddedAttestation, VerifyEr
         .iter()
         .position(|b| *b == b'{')
         .ok_or_else(|| VerifyError::MalformedExtension("no JSON object in extension".into()))?;
-    serde_json::from_slice(&raw[start..]).map_err(|e| VerifyError::MalformedExtension(e.to_string()))
+    serde_json::from_slice(&raw[start..])
+        .map_err(|e| VerifyError::MalformedExtension(e.to_string()))
 }
 
 /// The launch measurement is what a V-PROGRAM message pins, so it is what a
@@ -109,7 +136,10 @@ pub fn check_measurement(der: &[u8], expected: &[String]) -> Result<String, Veri
         return Err(VerifyError::UnsupportedTeeType(att.tee_type));
     }
     let measurement = report::launch_measurement(&att.data)?;
-    if expected.iter().any(|e| e.eq_ignore_ascii_case(&measurement)) {
+    if expected
+        .iter()
+        .any(|e| e.eq_ignore_ascii_case(&measurement))
+    {
         Ok(measurement)
     } else {
         Err(VerifyError::MeasurementMismatch { got: measurement })

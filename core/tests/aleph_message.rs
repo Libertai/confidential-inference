@@ -23,7 +23,10 @@ fn with_item_content(content: &str) -> String {
 fn content_that_does_not_hash_to_the_item_hash_is_refused() {
     let json: serde_json::Value = serde_json::from_str(MESSAGE).unwrap();
     let tampered = with_item_content(
-        &json["item_content"].as_str().unwrap().replace("sev_snp", "sev_snq"),
+        &json["item_content"]
+            .as_str()
+            .unwrap()
+            .replace("sev_snp", "sev_snq"),
     );
     assert!(matches!(
         aleph::verify_message(&tampered, Some(SENDER)),
@@ -46,7 +49,12 @@ fn a_forged_signature_is_refused() {
     // other key, which is the failure this has to catch.
     let json: serde_json::Value = serde_json::from_str(MESSAGE).unwrap();
     let sig = json["signature"].as_str().unwrap();
-    let flipped = format!("{}{}{}", &sig[..10], if &sig[10..11] == "a" { "b" } else { "a" }, &sig[11..]);
+    let flipped = format!(
+        "{}{}{}",
+        &sig[..10],
+        if &sig[10..11] == "a" { "b" } else { "a" },
+        &sig[11..]
+    );
     let forged = MESSAGE.replace(sig, &flipped);
     assert!(aleph::verify_message(&forged, Some(SENDER)).is_err());
 }

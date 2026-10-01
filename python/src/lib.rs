@@ -41,7 +41,12 @@ fn check_tcb(cert_der: &[u8], bootloader: u8, tee: u8, snp: u8, microcode: u8) -
     let report = core::chain::parse_report(&att.data).map_err(attestation_err)?;
     core::chain::check_tcb(
         &report,
-        core::chain::TcbFloor { bootloader, tee, snp, microcode },
+        core::chain::TcbFloor {
+            bootloader,
+            tee,
+            snp,
+            microcode,
+        },
     )
     .map_err(attestation_err)
 }
@@ -52,7 +57,10 @@ fn report_facts(py: Python<'_>, cert_der: &[u8]) -> PyResult<Py<PyDict>> {
     let att = core::attestation_from_cert(cert_der).map_err(attestation_err)?;
     let r = core::chain::parse_report(&att.data).map_err(attestation_err)?;
     let facts = PyDict::new(py);
-    facts.set_item("product", core::chain::product(&r).map_err(attestation_err)?.as_str())?;
+    facts.set_item(
+        "product",
+        core::chain::product(&r).map_err(attestation_err)?.as_str(),
+    )?;
     facts.set_item("measurement", hex(&r.measurement))?;
     facts.set_item("chip_id", hex(&r.chip_id))?;
     facts.set_item("report_data", hex(&r.report_data))?;
@@ -72,7 +80,8 @@ fn report_facts(py: Python<'_>, cert_der: &[u8]) -> PyResult<Py<PyDict>> {
 #[pyfunction]
 #[pyo3(signature = (message_json, sender=None))]
 fn verify_aleph_message(message_json: &str, sender: Option<&str>) -> PyResult<String> {
-    core::aleph::verify_message(message_json, sender).map_err(|e| AlephError::new_err(e.to_string()))
+    core::aleph::verify_message(message_json, sender)
+        .map_err(|e| AlephError::new_err(e.to_string()))
 }
 
 #[pymodule]

@@ -1,0 +1,80 @@
+# Every check runs offline: the fixtures are a certificate captured from a live
+# deployment and the VCEK AMD issued for that chip, so CI never depends on a
+# node being up or on AMD's rate limit.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --exclude confidential-inference-python --all-targets -- -D warnings
+      - run: cargo test -p confidential-inference-core
+      # The browser and Node clients run this build, not the host one.
+      - run: cargo build -p confidential-inference-core --target wasm32-unknown-unknown
+
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci || npm install
+        working-directory: js
+      - run: npm run build
+        working-directory: js
+      - run: npm test
+        working-directory: js
+      # A package that installs but cannot load is the failure mode worth
+      # catching here: the wasm is build output, and build output is easy to
+      # leave out of a tarball.
+      - name: install the packed tarball and load it
+        working-directory: js
+        run: |
+          npm pack
+          cd "$(mktemp -d)"
+          npm init -y
+          npm install "$OLDPWD"/libertai-confidential-inference-*.tgz
+          node -e 'import("@libertai/confidential-inference").then(m => {
+            if (typeof m.connect !== "function") { throw new Error("connect missing"); }
+            console.log("loaded from a clean install");
+          })'
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # `maturin develop` wants a virtualenv, and building into the source tree
+      # is what lets the tests import the compiled extension: the package
+      # directory is the source directory, so an installed copy elsewhere would
+      # be shadowed by it.
+      - name: build the extension and run the tests
+        working-directory: python
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install -q maturin pytest httpx
+          maturin develop
+          pytest -q

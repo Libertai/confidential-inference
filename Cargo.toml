@@ -1,3 +1,9 @@
 [workspace]
 resolver = "2"
 members = ["core", "wasm", "python"]
+
+# The wasm is shipped inside the npm package, so size is worth optimising for.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1

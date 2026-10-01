@@ -2,7 +2,9 @@
 //! the H200 V-PROGRAM f45e492a… and the measurements come from its published
 //! message, so these tests fail if either wire format drifts.
 
-use confidential_inference_core::{binding, chain, attestation_from_cert, check_measurement, VerifyError};
+use confidential_inference_core::{
+    attestation_from_cert, binding, chain, check_measurement, VerifyError,
+};
 
 const CERT: &[u8] = include_bytes!("fixtures/ratls-cert.der");
 
@@ -126,7 +128,12 @@ fn full_verification_of_the_live_peer() {
 fn a_firmware_floor_above_the_platform_is_refused() {
     let att = attestation_from_cert(CERT).expect("live cert carries a report");
     let report = chain::parse_report(&att.data).expect("report parses");
-    let current = chain::TcbFloor { bootloader: 12, tee: 0, snp: 28, microcode: 88 };
+    let current = chain::TcbFloor {
+        bootloader: 12,
+        tee: 0,
+        snp: 28,
+        microcode: 88,
+    };
     chain::check_tcb(&report, current).expect("the host meets its own TCB");
     let future = chain::TcbFloor { snp: 29, ..current };
     assert!(matches!(

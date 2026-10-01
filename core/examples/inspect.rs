@@ -21,7 +21,14 @@ fn main() {
     println!("report_data   {}", hex(&report.report_data));
     println!("chip_id       {}", hex(&report.chip_id));
     println!("reported_tcb  {:?}", report.reported_tcb);
-    println!("policy        debug_allowed={} smt={}", report.policy.debug_allowed(), report.policy.smt_allowed());
-    println!("key binding   {:?}", binding::check_key_binding(&der, &att.data));
+    println!(
+        "policy        debug_allowed={} smt={}",
+        report.policy.debug_allowed(),
+        report.policy.smt_allowed()
+    );
+    println!(
+        "key binding   {:?}",
+        binding::check_key_binding(&der, &att.data)
+    );
     println!("vcek          {}", chain::vcek_url(&report).unwrap());
 }

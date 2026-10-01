@@ -48,9 +48,8 @@ impl Product {
 /// Decode the 1184-byte firmware report.
 pub fn parse_report(report: &[u8]) -> Result<AttestationReport, VerifyError> {
     let mut cursor = std::io::Cursor::new(report);
-    AttestationReport::decode(&mut cursor, ()).map_err(|_| VerifyError::ShortReport {
-        len: report.len(),
-    })
+    AttestationReport::decode(&mut cursor, ())
+        .map_err(|_| VerifyError::ShortReport { len: report.len() })
 }
 
 /// Which EPYC signed this report. Version 3 reports carry CPUID directly;
@@ -62,7 +61,10 @@ pub fn product(report: &AttestationReport) -> Result<Product, VerifyError> {
         (Some(0x19), Some(model)) => match model {
             0x00..=0x0F => Ok(Product::Milan),
             0x10..=0x1F | 0xA0..=0xAF => Ok(Product::Genoa),
-            _ => Err(VerifyError::UnknownProduct { family: 0x19, model }),
+            _ => Err(VerifyError::UnknownProduct {
+                family: 0x19,
+                model,
+            }),
         },
         (Some(0x1A), Some(0x00..=0x11)) => Ok(Product::Turin),
         (Some(family), Some(model)) => Err(VerifyError::UnknownProduct { family, model }),
@@ -96,8 +98,7 @@ pub fn vcek_url(report: &AttestationReport) -> Result<String, VerifyError> {
 /// AMD endorses this report: ARK self-signs, signs the ASK, which signs the
 /// caller-supplied VCEK, which signs the report body.
 pub fn verify_report(report: &AttestationReport, vcek_der: &[u8]) -> Result<(), VerifyError> {
-    let vek =
-        Certificate::from_der(vcek_der).map_err(|e| VerifyError::Chain(e.to_string()))?;
+    let vek = Certificate::from_der(vcek_der).map_err(|e| VerifyError::Chain(e.to_string()))?;
     let chain = Chain {
         ca: product(report)?.roots()?,
         vek,

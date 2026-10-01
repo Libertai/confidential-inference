@@ -49,11 +49,7 @@ pub fn vcek_url(cert_der: &[u8]) -> Result<String, JsError> {
 ///
 /// `expected` are the measurements the deployment published, one per vCPU type.
 #[wasm_bindgen]
-pub fn verify(
-    cert_der: &[u8],
-    vcek_der: &[u8],
-    expected: Vec<String>,
-) -> Result<String, JsError> {
+pub fn verify(cert_der: &[u8], vcek_der: &[u8], expected: Vec<String>) -> Result<String, JsError> {
     core::verify(cert_der, vcek_der, &expected).map_err(js_err)
 }
 
@@ -72,7 +68,12 @@ pub fn check_tcb(
     let report = core::chain::parse_report(&att.data).map_err(js_err)?;
     core::chain::check_tcb(
         &report,
-        core::chain::TcbFloor { bootloader, tee, snp, microcode },
+        core::chain::TcbFloor {
+            bootloader,
+            tee,
+            snp,
+            microcode,
+        },
     )
     .map_err(js_err)
 }
@@ -83,7 +84,10 @@ pub fn report_facts(cert_der: &[u8]) -> Result<JsValue, JsError> {
     let att = core::attestation_from_cert(cert_der).map_err(js_err)?;
     let r = core::chain::parse_report(&att.data).map_err(js_err)?;
     let facts = ReportFacts {
-        product: core::chain::product(&r).map_err(js_err)?.as_str().to_string(),
+        product: core::chain::product(&r)
+            .map_err(js_err)?
+            .as_str()
+            .to_string(),
         measurement: hex(&r.measurement),
         chip_id: hex(&r.chip_id),
         report_data: hex(&r.report_data),
