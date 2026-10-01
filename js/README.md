@@ -61,7 +61,7 @@ prompt was sent, rather than one sent and regretted.
 
 ```json
 {
-  "source_repo": "https://github.com/libertai/...",
+  "source_repo": "https://github.com/Libertai/confidential-inference",
   "models": {
     "qwen3.8-27b": {
       "deployments": [
