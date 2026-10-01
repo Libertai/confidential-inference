@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Audit a deployment from a terminal:
  *

@@ -17,7 +17,7 @@
     "vendor"
   ],
   "scripts": {
-    "build:wasm": "wasm-pack build ../wasm --release --target nodejs --out-dir ../js/vendor/node --out-name cic",
+    "build:wasm": "wasm-pack build ../wasm --release --target nodejs --out-dir ../js/vendor/node --out-name cic && rm -f vendor/node/.gitignore && node -e \"require('fs').writeFileSync('vendor/node/package.json', '{\\\"type\\\": \\\"commonjs\\\"}\\n')\"",
     "build": "npm run build:wasm && tsc",
     "test": "node --test test/*.test.js"
   },
