@@ -98,3 +98,12 @@ pub fn report_facts(cert_der: &[u8]) -> Result<JsValue, JsError> {
     };
     serde_wasm_bindgen::to_value(&facts).map_err(|e| JsError::new(&e.to_string()))
 }
+
+/// Establish that an Aleph message is the one `sender` published, and return
+/// its verified content as JSON text. Fetching the message is the caller's job;
+/// where it came from does not matter, because the hash and the signature
+/// settle what it is.
+#[wasm_bindgen(js_name = verifyAlephMessage)]
+pub fn verify_aleph_message(message_json: &str, sender: Option<String>) -> Result<String, JsError> {
+    core::aleph::verify_message(message_json, sender.as_deref()).map_err(js_err)
+}

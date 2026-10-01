@@ -91,6 +91,13 @@ npx @libertai/confidential-inference               # what is published
 npx @libertai/confidential-inference qwen3.8-27b   # verify and report
 ```
 
+## One implementation of the checks
+
+Hashing, signature recovery and report verification live in a Rust core
+compiled to WebAssembly, which this package wraps. A second client -- Python,
+or a browser build -- wraps the same binary rather than reimplementing the
+rules, so there is nothing for the implementations to disagree about.
+
 ## Node only, for now
 
 Verification needs the peer's certificate before any request is sent, which

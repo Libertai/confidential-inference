@@ -22,8 +22,6 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "@noble/curves": "^1.9.0",
-    "@noble/hashes": "^1.8.0",
     "undici": "^7.0.0"
   },
   "devDependencies": {

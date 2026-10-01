@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod aleph;
 pub mod binding;
 pub mod chain;
 pub mod report;
@@ -45,6 +46,9 @@ pub enum VerifyError {
     UnknownProduct { family: u8, model: u8 },
     /// The platform runs firmware older than the caller accepts.
     TcbTooOld { component: String, got: u8, want: u8 },
+    /// An Aleph message did not hold up: wrong hash, wrong signer, or
+    /// malformed.
+    Aleph(String),
     /// The guest policy permits host debugging, so the enclave guarantees do
     /// not hold whatever the report says.
     DebugAllowed,
@@ -71,6 +75,7 @@ impl core::fmt::Display for VerifyError {
             Self::TcbTooOld { component, got, want } => {
                 write!(f, "platform {component} firmware is {got}, below the required {want}")
             }
+            Self::Aleph(e) => write!(f, "{e}"),
             Self::DebugAllowed => write!(f, "guest policy allows host debugging"),
         }
     }

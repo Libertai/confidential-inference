@@ -6,10 +6,15 @@ use confidential_inference_core::{binding, chain, attestation_from_cert, check_m
 
 const CERT: &[u8] = include_bytes!("fixtures/ratls-cert.der");
 
+/// Exactly how a client gets them: verify the published message, then read the
+/// digests out of the content it vouched for.
 fn published_measurements() -> Vec<String> {
-    let msg: serde_json::Value =
-        serde_json::from_str(include_str!("fixtures/vprogram-message.json")).unwrap();
-    let content = &msg["message"]["content"];
+    let verified = confidential_inference_core::aleph::verify_message(
+        include_str!("fixtures/vprogram-message.json"),
+        Some("0x238224C744F4b90b4494516e074D2676ECfC6803"),
+    )
+    .expect("the deployment's message verifies");
+    let content: serde_json::Value = serde_json::from_str(&verified).unwrap();
     content["verification"]["measurements"]
         .as_array()
         .unwrap()

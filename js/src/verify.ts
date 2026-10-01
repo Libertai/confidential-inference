@@ -4,29 +4,15 @@
  * run identical checks; network access is the host's, so the VCEK arrives as
  * an argument.
  */
-import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-const require = createRequire(import.meta.url);
-const wasm = require("../vendor/node/cic.js") as {
-  verify(cert: Uint8Array, vcek: Uint8Array, expected: string[]): string;
-  vcekUrl(cert: Uint8Array): string;
-  checkTcb(cert: Uint8Array, bl: number, tee: number, snp: number, ucode: number): void;
-  reportFacts(cert: Uint8Array): ReportFacts;
-};
+import * as wasm from "./wasm.js";
+import type { ReportFacts } from "./wasm.js";
 
-export interface ReportFacts {
-  product: string;
-  measurement: string;
-  chipId: string;
-  reportData: string;
-  debugAllowed: boolean;
-  smtAllowed: boolean;
-  reportedTcb: { bootloader: number; tee: number; snp: number; microcode: number };
-}
+export type { ReportFacts };
 
 export interface TcbFloor {
   bootloader: number;

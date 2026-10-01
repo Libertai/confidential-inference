@@ -28,6 +28,9 @@ test("a message is refused when another address claims it", () => {
 });
 
 test("a forged signature is refused", () => {
-  const flipped = message.signature.slice(0, -2) + (message.signature.endsWith("1b") ? "1c" : "1b");
+  // Flipping a byte of r leaves a well-formed signature that recovers some
+  // other key, which is the failure this has to catch.
+  const sig = message.signature;
+  const flipped = sig.slice(0, 10) + (sig[10] === "a" ? "b" : "a") + sig.slice(11);
   assert.throws(() => verifyMessage({ ...message, signature: flipped }, SENDER), AlephError);
 });
