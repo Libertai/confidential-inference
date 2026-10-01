@@ -15,6 +15,8 @@ is talking to the published workload and not to a host that can read it.
   than a second implementation of them.
 - `js/` — `@libertai/confidential-inference`: discovery, an attesting
   transport, and a `fetch` to hand to the OpenAI SDK.
+- `python/` — `libertai-confidential-inference`: the same, as an `httpx` client
+  pinned to the peer it verified.
 
 ## What a verified connection means
 
@@ -43,3 +45,4 @@ fail if either wire format drifts.
     cargo test
     cargo run -p confidential-inference-core --example inspect -- cert.der
     cd js && npm run build && npm test
+    cd python && maturin develop && pytest
