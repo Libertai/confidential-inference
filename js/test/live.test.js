@@ -11,8 +11,16 @@ test("a live deployment can be reached only once it is proved", { skip: !itemHas
   const tee = await connect({ itemHash });
   assert.match(tee.baseURL, /^https:\/\/.+\/v1$/);
   assert.equal(tee.measurement.length, 96);
+});
 
-  const res = await tee.fetch(`${tee.baseURL}/models`);
-  assert.equal(res.status, 200);
-  assert.ok((await res.json()).data.length > 0);
+test("the enclave refuses an unauthenticated request", { skip: !itemHash }, async () => {
+  // Proof that the API-key gateway is what answers, not vLLM: verification
+  // succeeded, the channel is attested, and the request is still refused.
+  const tee = await connect({ itemHash });
+  const res = await tee.fetch(`${tee.baseURL}/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model: "qwen3.8-27b", messages: [] }),
+  });
+  assert.equal(res.status, 401);
 });
