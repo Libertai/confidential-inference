@@ -1,0 +1,96 @@
+{
+ "chain": "ETH",
+ "channel": null,
+ "confirmations": [
+  {
+   "chain": "ETH",
+   "hash": "617b172a26474be5801867b7c537d45c7803ea02caca5a5a1999ca7dbf9593b4",
+   "height": 26083753
+  }
+ ],
+ "confirmed": true,
+ "content": {
+  "address": "0x238224C744F4b90b4494516e074D2676ECfC6803",
+  "allow_amend": false,
+  "environment": {
+   "internet": true
+  },
+  "gpu": {
+   "arch": "hopper",
+   "count": 1,
+   "mode": "cc",
+   "models": [
+    "10de:233b"
+   ],
+   "vendor": "nvidia"
+  },
+  "metadata": {
+   "name": "vllm-qwen3.8-27b-1m"
+  },
+  "payment": {
+   "type": "credit"
+  },
+  "requirements": {
+   "node": {
+    "node_hash": "685ad7a7c34488cd361f46716371f57d9e4d1eedf95f50dda066fe958fc1b93b"
+   }
+  },
+  "resources": {
+   "memory": 32768,
+   "seconds": 30,
+   "vcpus": 16
+  },
+  "runtime": {
+   "comment": "",
+   "ref": "1a5ee478326730db94f8674d9756bbdcfbf52aa54953a081da42bcfe46308de1"
+  },
+  "time": 1790690697.7843268,
+  "verification": {
+   "backend": "sev_snp",
+   "measurements": [
+    {
+     "platform": "sev_snp",
+     "registers": {
+      "launch": "dd1e95158e450fc62e28f92530f0acc2312c380e649a4e47364e1555b6b4e33e98805a2f1643888ab73e2bae195e6e31"
+     },
+     "vcpu_type": "EPYC-Genoa"
+    },
+    {
+     "platform": "sev_snp",
+     "registers": {
+      "launch": "5390e5a19fcc8fe10e470f4af9aa4fb1ceef3e16db0dcbcf501bf9393d861ea90dfc91fe3fc415a04dca05840328b777"
+     },
+     "vcpu_type": "EPYC-v4"
+    }
+   ],
+   "policy": 196608
+  },
+  "volumes": [
+   {
+    "comment": "",
+    "hash_tree": "ca4910c2b8b004d0ee05569e6804048454a16897e8dc0e4e5fad2b2729caf35d",
+    "ref": "098439a70243ea95de943fcd4678aee5f7169382316c4e325265e05705212434",
+    "roothash": "df654f3f87a19bf80636d319315623db353a82cde84318e1e1092a8f4623ccec"
+   },
+   {
+    "comment": "",
+    "hash_tree": "fa14126693852628c4c2b7881fa797e156fd345d6fa9c99c69b29ca767c6dd64",
+    "ref": "ab40118f4bfa6c1b24ac467202e23e4a31efdad285e5daec354a1bcdc7110e83",
+    "roothash": "4ddfb7d7b24630320a127fcdf073fa04407a801fb298b2ed1d3b72012af90edd"
+   }
+  ],
+  "workload": {
+   "hash_tree": "d3f31dfb54225980c227522c8b26a7e984d945a19b2e61506da6a1a0272fc319",
+   "ref": "ea723a9204752ddd09cfbe6e9dd8dbdd8751983d946d91f28a455f1d80f7bbfe",
+   "roothash": "7bd498b886fc01f481815efa18e5c129b695da688db7f6522dcd719a619d6d46"
+  }
+ },
+ "item_content": "{\"address\":\"0x238224C744F4b90b4494516e074D2676ECfC6803\",\"allow_amend\":false,\"environment\":{\"internet\":true},\"gpu\":{\"arch\":\"hopper\",\"count\":1,\"mode\":\"cc\",\"models\":[\"10de:233b\"],\"vendor\":\"nvidia\"},\"metadata\":{\"name\":\"vllm-qwen3.8-27b-1m\"},\"payment\":{\"type\":\"credit\"},\"requirements\":{\"node\":{\"node_hash\":\"685ad7a7c34488cd361f46716371f57d9e4d1eedf95f50dda066fe958fc1b93b\"}},\"resources\":{\"memory\":32768,\"seconds\":30,\"vcpus\":16},\"runtime\":{\"comment\":\"\",\"ref\":\"1a5ee478326730db94f8674d9756bbdcfbf52aa54953a081da42bcfe46308de1\"},\"time\":1790690697.7843268,\"verification\":{\"backend\":\"sev_snp\",\"measurements\":[{\"platform\":\"sev_snp\",\"registers\":{\"launch\":\"dd1e95158e450fc62e28f92530f0acc2312c380e649a4e47364e1555b6b4e33e98805a2f1643888ab73e2bae195e6e31\"},\"vcpu_type\":\"EPYC-Genoa\"},{\"platform\":\"sev_snp\",\"registers\":{\"launch\":\"5390e5a19fcc8fe10e470f4af9aa4fb1ceef3e16db0dcbcf501bf9393d861ea90dfc91fe3fc415a04dca05840328b777\"},\"vcpu_type\":\"EPYC-v4\"}],\"policy\":196608},\"volumes\":[{\"comment\":\"\",\"hash_tree\":\"ca4910c2b8b004d0ee05569e6804048454a16897e8dc0e4e5fad2b2729caf35d\",\"ref\":\"098439a70243ea95de943fcd4678aee5f7169382316c4e325265e05705212434\",\"roothash\":\"df654f3f87a19bf80636d319315623db353a82cde84318e1e1092a8f4623ccec\"},{\"comment\":\"\",\"hash_tree\":\"fa14126693852628c4c2b7881fa797e156fd345d6fa9c99c69b29ca767c6dd64\",\"ref\":\"ab40118f4bfa6c1b24ac467202e23e4a31efdad285e5daec354a1bcdc7110e83\",\"roothash\":\"4ddfb7d7b24630320a127fcdf073fa04407a801fb298b2ed1d3b72012af90edd\"}],\"workload\":{\"hash_tree\":\"d3f31dfb54225980c227522c8b26a7e984d945a19b2e61506da6a1a0272fc319\",\"ref\":\"ea723a9204752ddd09cfbe6e9dd8dbdd8751983d946d91f28a455f1d80f7bbfe\",\"roothash\":\"7bd498b886fc01f481815efa18e5c129b695da688db7f6522dcd719a619d6d46\"}}",
+ "item_hash": "f45e492aed28a34baa5d7d798e23f1abce76cd4c70e6be3da89110ba2f45f9e0",
+ "item_type": "inline",
+ "sender": "0x238224C744F4b90b4494516e074D2676ECfC6803",
+ "signature": "0xc20d4d2192c5b6ef41efe80db50782cbcc609342af01e0bbef8d775f3c6f5bbc11b11ffc1c3728666c4076aee133c5d814bb463c2a0e5e26fb0102114b7ff3e01c",
+ "size": 1699,
+ "time": 1790690697.784327,
+ "type": "V-PROGRAM"
+}

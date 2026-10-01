@@ -1,0 +1,40 @@
+{
+  "name": "@libertai/confidential-inference",
+  "version": "0.1.0",
+  "description": "Verify you are talking to LibertAI inference running in an attested confidential VM, then talk to it directly.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "vendor"
+  ],
+  "scripts": {
+    "build:wasm": "wasm-pack build ../wasm --release --target nodejs --out-dir ../js/vendor/node --out-name cic",
+    "build": "npm run build:wasm && tsc",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
+    "undici": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
+    "openai": "^4.80.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "libertai-confidential": "./dist/cli.js"
+  }
+}
