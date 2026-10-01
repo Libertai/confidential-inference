@@ -8,6 +8,27 @@ use confidential_inference_core::{
 
 const CERT: &[u8] = include_bytes!("fixtures/ratls-cert.der");
 
+/// The digest for the vCPU model this deployment actually runs on. Asserting a
+/// literal here would mean editing the test on every redeploy, since replacing
+/// any image changes the measurement.
+fn genoa_measurement() -> String {
+    let verified = confidential_inference_core::aleph::verify_message(
+        include_str!("fixtures/vprogram-message.json"),
+        Some("0x238224C744F4b90b4494516e074D2676ECfC6803"),
+    )
+    .expect("the deployment's message verifies");
+    let content: serde_json::Value = serde_json::from_str(&verified).unwrap();
+    content["verification"]["measurements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["vcpu_type"] == "EPYC-Genoa")
+        .expect("the message publishes an EPYC-Genoa digest")["registers"]["launch"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
 /// Exactly how a client gets them: verify the published message, then read the
 /// digests out of the content it vouched for.
 fn published_measurements() -> Vec<String> {
@@ -38,14 +59,14 @@ fn live_report_matches_a_published_measurement() {
     assert_eq!(expected.len(), 2, "one digest per vcpu_type");
     let m = check_measurement(CERT, &expected).expect("live peer matches its message");
     // The host ran it on Genoa, so the EPYC-Genoa digest is the one that hits.
-    assert!(m.starts_with("dd1e95158e450fc6"));
+    assert_eq!(m, genoa_measurement());
 }
 
 #[test]
 fn a_digest_from_another_deployment_is_rejected() {
     let other = vec!["5390e5a19fcc8fe10e470f4af9aa4fb1".to_string() + &"0".repeat(64)];
     match check_measurement(CERT, &other) {
-        Err(VerifyError::MeasurementMismatch { got }) => assert!(got.starts_with("dd1e9515")),
+        Err(VerifyError::MeasurementMismatch { got }) => assert_eq!(got, genoa_measurement()),
         other => panic!("expected mismatch, got {other:?}"),
     }
 }
@@ -121,7 +142,7 @@ fn the_vcek_url_is_the_one_that_verifies() {
 fn full_verification_of_the_live_peer() {
     let m = confidential_inference_core::verify(CERT, VCEK, &published_measurements())
         .expect("live peer verifies end to end");
-    assert!(m.starts_with("dd1e95158e450fc6"));
+    assert_eq!(m, genoa_measurement());
 }
 
 #[test]
