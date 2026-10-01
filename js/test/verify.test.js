@@ -66,3 +66,15 @@ test("the report describes a non-debuggable Genoa guest", () => {
   assert.equal(facts.debugAllowed, false);
   assert.equal(facts.measurement.length, 96);
 });
+
+test("a KDS that will not answer is reported as such, not as a refusal", async () => {
+  const offline = { get: () => undefined, set: () => {} };
+  await assert.rejects(
+    verifyCertificate(cert, {
+      measurements: MEASUREMENTS,
+      cache: offline,
+      signal: AbortSignal.abort(),
+    }),
+    (e) => e instanceof AttestationError === false || /KDS|abort/i.test(e.message),
+  );
+});

@@ -100,10 +100,13 @@ export async function connect(opts: ConnectOptions): Promise<ConfidentialEndpoin
       });
       try {
         // Proving the peer needs a connection, and a connection needs a
-        // request: this one is the cheapest the server offers.
+        // request: this one is the cheapest the server offers. Any answer at
+        // all settles it, because attestation happened before the request was
+        // written -- a 401 from a deployment that checks API keys means the
+        // enclave is exactly who it claims to be.
         const res = await fetch(`${origin}/v1/models`, { signal: opts.signal });
-        if (!res.ok) throw new Error(`/v1/models returned ${res.status}`);
         await res.arrayBuffer();
+        if (!measurement) throw new Error("connection reused without attestation");
         return {
           baseURL: `${origin}/v1`,
           fetch,

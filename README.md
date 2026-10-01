@@ -10,8 +10,11 @@ is talking to the published workload and not to a host that can read it.
 ## Layout
 
 - `core/` — `confidential-inference-core`, the verification itself. No network,
-  no platform assumptions; builds for `wasm32-unknown-unknown` so the same code
-  runs in a browser.
+  no platform assumptions; builds for `wasm32-unknown-unknown`.
+- `wasm/` — `wasm-bindgen` wrapper, so JavaScript runs the same checks rather
+  than a second implementation of them.
+- `js/` — `@libertai/confidential-inference`: discovery, an attesting
+  transport, and a `fetch` to hand to the OpenAI SDK.
 
 ## What a verified connection means
 
@@ -39,3 +42,4 @@ fail if either wire format drifts.
 
     cargo test
     cargo run -p confidential-inference-core --example inspect -- cert.der
+    cd js && npm run build && npm test
