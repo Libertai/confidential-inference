@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# Builds the four images of the confidential-GPU vLLM V-PROGRAM into $OUT
+# (default ./out):
+#
+#   workload.ext4   busybox + init.sh + model.conf
+#   vllm-runtime.ext4   root filesystem of the pinned vllm-openai image
+#   model-*.ext4        the HF checkpoint, at the pinned revision
+#   gateway.ext4        the libertai-models gateway and its Python closure
+#
+# Every input that ends up inside the launch measurement is pinned here or in
+# flake.lock, so the same commit of this repository rebuilds the same images.
+# See ../VERIFYING.md for how to check that against a published deployment.
+#
+# Usage: build.sh [--models-rev <sha|latest>]
+#   The gateway's source revision. Defaults to the commit in flake.lock, which
+#   is what lets a rebuild reproduce a published measurement; `latest` takes
+#   the newest commit on the default branch instead, for cutting a new one.
+#
+# Needs ~75 GB free. The checkpoint tree and the rootfs tarball are each
+# removed as soon as their image exists; the four images then take ~55 GB.
+set -euo pipefail
+
+# Pinned by digest and revision: both are inside the launch measurement, so a
+# floating tag would silently change what a client is asked to trust.
+IMAGE=vllm/vllm-openai@sha256:5f5e535216848d0c52159c8c13a0af04be5f6fe1a84e79914300610796f76d40
+MODEL_REPO=Qwen/Qwen3.8-27B-FP8
+MODEL_REV=017b9c7af6b5689d5dd426a76e0bc077eb5ca20a
+MODEL_NAME=qwen3.8-27b-fp8
+
+OUT=${OUT:-$PWD/out}
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+mkdir -p "$OUT"
+
+LOCKED_REV=$(python3 -c '
+import json, sys
+lock = json.load(open(sys.argv[1]))
+print(lock["nodes"]["libertai-models"]["locked"]["rev"])
+' "$here/flake.lock")
+MODELS_REV=$LOCKED_REV
+while [ $# -gt 0 ]; do
+    case $1 in
+        --models-rev)
+            MODELS_REV=$2
+            shift 2
+            ;;
+        *) echo "unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
+if [ "$MODELS_REV" = latest ]; then
+    MODELS_REV=$(curl -fsSL https://api.github.com/repos/Libertai/libertai-models/commits/main |
+        python3 -c 'import json,sys;print(json.load(sys.stdin)["sha"])')
+fi
+# Printed because a deployment is only reproducible if this is recorded with it.
+echo "==> libertai-models $MODELS_REV"
+
+export SOURCE_DATE_EPOCH=0
+MKFS_FLAGS=(-b 4096 -U 00000000-0000-0000-0000-000000000000
+  -E hash_seed=a1e5c0de-1111-2222-3333-444455556666,lazy_itable_init=0,lazy_journal_init=0
+  -O ^has_journal)
+
+nixsh() { nix shell nixpkgs#e2fsprogs nixpkgs#fakeroot nixpkgs#bash nixpkgs#coreutils nixpkgs#gnutar -c "$@"; }
+
+mkfs_from_dir() {
+    local src=$1 img=$2 mib
+    mib=$(( $(du -sm "$src" | cut -f1) * 103 / 100 + 16 ))
+    rm -f "$img"
+    nixsh sh -c "fakeroot \$(command -v bash) -c \"\$(command -v chown) -R 0:0 '$src' && \
+        \$(command -v mkfs.ext4) -q ${MKFS_FLAGS[*]} -N 256 -d '$src' '$img' ${mib}M\""
+}
+
+echo "==> workload"
+wl=$(mktemp -d)
+trap 'rm -rf "$wl"' EXIT
+mkdir -p "$wl"/{bin,sbin,etc/libertai,volumes,proc,sys,dev,run,mnt,tmp/secrets,opt/nvidia/lib}
+# The gateway's interpreter refers to /nix/store by absolute path, and it lives
+# on volume 2. A symlink costs nothing in a read-only image and saves a mount.
+ln -s /volumes/2/nix "$wl/nix"
+cp "$(nix build --no-link --print-out-paths nixpkgs#pkgsStatic.busybox)/bin/busybox" "$wl/bin/busybox"
+cp "$here/init.sh" "$wl/sbin/init"
+cp "$here/model.conf" "$wl/etc/libertai/model.conf"
+touch "$wl/etc/resolv.conf"
+chmod 0755 "$wl/bin/busybox" "$wl/sbin/init"
+mkfs_from_dir "$wl" "$OUT/workload.ext4"
+
+echo "==> model volume ($MODEL_REPO@${MODEL_REV:0:8})"
+# Guarded as a whole: the checkpoint tree is deleted once its image exists, so
+# checking for the tree instead of the image would re-download 30 GB on every
+# later run.
+if [ ! -f "$OUT/model-$MODEL_NAME.ext4" ]; then
+    md=$OUT/model-$MODEL_NAME
+    mkdir -p "$md"
+    curl -fsSL "https://huggingface.co/api/models/$MODEL_REPO/revision/$MODEL_REV" |
+        python3 -c 'import json,sys;[print(s["rfilename"]) for s in json.load(sys.stdin)["siblings"]]' |
+        while read -r f; do
+            [ -s "$md/$f" ] && continue
+            mkdir -p "$md/$(dirname "$f")"
+            curl -fsSL -o "$md/$f" "https://huggingface.co/$MODEL_REPO/resolve/$MODEL_REV/$f"
+        done
+    mkfs_from_dir "$md" "$OUT/model-$MODEL_NAME.ext4"
+    # Peak disk is the binding constraint (~75 GB): the checkpoint tree is only
+    # needed until its image exists, and re-downloading it is cheaper than a disk.
+    [ -n "${KEEP_MODEL_SRC:-}" ] || rm -rf "$md"
+fi
+
+echo "==> runtime volume ($IMAGE)"
+rt=$OUT/vllm-runtime.ext4
+if [ ! -f "$rt" ]; then
+    tar=$OUT/vllm-rootfs.tar
+    [ -f "$tar" ] || nix shell nixpkgs#crane -c crane export --platform linux/amd64 "$IMAGE" "$tar"
+    # The image has no /opt/nvidia: append the mount point the second chroot
+    # needs, root-owned, before the tarball becomes a read-only filesystem.
+    stage=$(mktemp -d)
+    mkdir -p "$stage/opt/nvidia/lib"
+    nixsh sh -c "fakeroot \$(command -v bash) -c \"\$(command -v chown) -R 0:0 '$stage' && \
+        \$(command -v tar) --append --file '$tar' --directory '$stage' opt\""
+    rm -rf "$stage"
+    # mkfs.ext4 -d reads a tarball directly (e2fsprogs >= 1.47.1), keeping the
+    # image's ownership and modes without unpacking as root.
+    nixsh mkfs.ext4 -q "${MKFS_FLAGS[@]}" -d "$tar" "$rt" \
+        "$(( $(du -sm "$tar" | cut -f1) * 104 / 100 + 256 ))M"
+    rm -f "$tar"
+fi
+
+echo "==> gateway volume (libertai-models $MODELS_REV)"
+gw=$OUT/gateway.ext4
+if [ ! -f "$gw" ]; then
+    # --override-input rather than editing flake.lock: the lock stays the
+    # record of what the published deployment was built from.
+    override=()
+    [ "$MODELS_REV" = "$LOCKED_REV" ] ||
+        override=(--override-input libertai-models "github:Libertai/libertai-models/$MODELS_REV")
+    cp "$(nix build --no-link --print-out-paths "${override[@]}" "$here#gateway")" "$gw"
+    chmod 644 "$gw"
+fi
+
+echo "==> done"
+ls -la "$OUT"/*.ext4

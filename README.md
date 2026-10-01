@@ -17,6 +17,13 @@ is talking to the published workload and not to a host that can read it.
   transport, and a `fetch` to hand to the OpenAI SDK.
 - `python/` — `libertai-confidential-inference`: the same, as an `httpx` client
   pinned to the peer it verified.
+- `deployment/` — what the enclave runs: the guest init, the vLLM serving
+  flags, and the gateway volume. Everything that ends up in the launch
+  measurement is pinned here, so a rebuild from a given commit reproduces a
+  published deployment.
+
+Rebuilding a deployment and checking its measurement is
+[`VERIFYING.md`](VERIFYING.md).
 
 ## What a verified connection means
 
@@ -46,3 +53,6 @@ fail if either wire format drifts.
     cargo run -p confidential-inference-core --example inspect -- cert.der
     cd js && npm run build && npm test
     cd python && maturin develop && pytest
+
+Building the deployment images needs Linux, Nix and ~75 GB of disk; see
+[`VERIFYING.md`](VERIFYING.md).
