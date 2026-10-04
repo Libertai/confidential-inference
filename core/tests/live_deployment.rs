@@ -1,5 +1,5 @@
 //! Verification against a real deployment: the certificate was captured from
-//! the H200 V-PROGRAM f45e492a… and the measurements come from its published
+//! the H200 V-PROGRAM 46bd0223… and the measurements come from its published
 //! message, so these tests fail if either wire format drifts.
 
 use confidential_inference_core::{

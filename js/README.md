@@ -26,6 +26,14 @@ LibertAI included — an intermediary that could would defeat the point.
 Pass `tee.fetch` as well as `tee.baseURL`: the default `fetch` would reach the
 same address without proving anything about it.
 
+## You need an API key
+
+Every request is checked inside the enclave by the `libertai-models` gateway
+before it reaches the model, so a connection that verifies will still answer
+`401` until LibertAI has issued you a key. Attestation and authorisation are
+separate: verifying tells you *who* you are talking to, the key is what buys
+you an answer.
+
 ## What a connection proves
 
 The server is an AMD SEV-SNP guest whose TLS certificate carries a signed
@@ -65,7 +73,7 @@ prompt was sent, rather than one sent and regretted.
   "models": {
     "qwen3.8-27b": {
       "deployments": [
-        { "item_hash": "f45e4…", "source_commit": "b5a6720", "status": "active" }
+        { "item_hash": "46bd0223b8ba6b49cda6834217ecce6650fc9e11aac839a838678d3c163cccec", "source_commit": "2a2fc8d", "status": "active" }
       ]
     }
   }

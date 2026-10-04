@@ -11,7 +11,10 @@ jobs:
   wheels:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # `macos-latest` is arm64 and `ubuntu-latest` is x64, so Intel Macs and
+        # aarch64 Linux need their own runners or `pip install` finds nothing to
+        # download for them.
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-13, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +28,23 @@ jobs:
           name: wheels-${{ matrix.os }}
           path: dist
 
+  # The fallback for anything the matrix misses: it vendors the sibling core
+  # crate, so it builds from source on a platform with a Rust toolchain.
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path python/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
   pypi:
-    needs: wheels
+    needs: [wheels, sdist]
     runs-on: ubuntu-latest
     # Trusted publishing: no long-lived token lives in this repository.
     environment: release
@@ -35,7 +53,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: wheels-*
+          pattern: "{wheels-*,sdist}"
           merge-multiple: true
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1

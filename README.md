@@ -50,6 +50,9 @@ deployment and the measurements from its published Aleph message, so the tests
 fail if either wire format drifts.
 
     cargo test
+    # inspect needs a captured certificate; see the example's own header
+    openssl s_client -connect <host>:<port> </dev/null 2>/dev/null |
+      openssl x509 -outform der -out cert.der
     cargo run -p confidential-inference-core --example inspect -- cert.der
     cd js && npm run build && npm test
     cd python && maturin develop && pytest

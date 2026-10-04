@@ -24,12 +24,16 @@ print(tee.base_url, tee.measurement)
 
 ```js
 import { connect } from "@libertai/confidential-inference";
-const tee = await connect({ itemHash: "46bd0223…" });
+const tee = await connect({ itemHash: "46bd0223b8ba6b49cda6834217ecce6650fc9e11aac839a838678d3c163cccec" });
 ```
 
 Either call throws unless every check passes. The V-PROGRAM message is
 content-addressed and signed, so this trusts no Aleph node: see
 [`README.md`](README.md).
+
+A verified connection is not an authorised one. The enclave answers `401` until
+LibertAI issues you an API key, which is checked by the gateway inside the
+enclave rather than in front of it.
 
 ## 2. Check the images
 
@@ -41,9 +45,12 @@ git clone https://github.com/Libertai/confidential-inference
 cd confidential-inference
 git checkout <source_commit from the manifest>
 
-./deployment/build.sh
-./deployment/verify-images.sh <item hash>
+OUT=/var/tmp/cci ./deployment/build.sh          # ~55 GB of images
+./deployment/verify-images.sh <item hash> /var/tmp/cci
 ```
+
+`OUT` keeps the images out of the clone; it defaults to `./out`, which is
+git-ignored.
 
 `build.sh` prints the `libertai-models` revision it used. It defaults to the
 commit in `deployment/flake.lock`, which is the one the published deployment
@@ -51,15 +58,18 @@ was built from; `--models-rev <sha|latest>` overrides it, and a different
 revision produces different bytes.
 
 `verify-images.sh` takes each root hash the deployment published and recomputes
-it from the local file. All four matching means the enclave booted these exact
-bytes.
+it from the local file. All four matching means the workload and the volumes the
+enclave booted are these exact bytes -- the model, the serving flags, the
+gateway and the guest init. The firmware, kernel and initrd come from the Aleph
+runtime bundle the message names; the measurement covers them, but nothing here
+rebuilds them.
 
 ### Why the salt comes from the published hash tree
 
 A dm-verity root hash is a hash of the image *and a salt*, and
 `veritysetup format` picks a random salt unless told otherwise. The CLI that
 publishes a V-PROGRAM does not tell it otherwise
-([`aleph-cli/src/veritysetup.rs`](https://github.com/aleph-im/aleph-sdk-rs)), so
+([`aleph-cli/src/veritysetup.rs`](https://github.com/aleph-im/aleph-rs)), so
 the root hash — and therefore the launch measurement — is different on every
 publish of byte-identical images.
 
@@ -102,8 +112,9 @@ count changes the measurement even though no file changed.
 
 Images have to be byte-reproducible for any of this to work, which is why
 `mkfs.ext4` gets a fixed UUID, a fixed non-zero hash seed, no journal and
-non-lazy init, and why trees are built under `fakeroot` so ownership does not
-depend on who ran the build.
+non-lazy init, why trees are built under `fakeroot` so ownership does not depend
+on who ran the build, and why `build.sh` pins its own `umask`: file modes land in
+the image, and the umask decides them for anything the script creates.
 
 ## Current deployment
 

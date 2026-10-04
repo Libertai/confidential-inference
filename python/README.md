@@ -26,6 +26,14 @@ LibertAI included — an intermediary that could would defeat the point.
 Pass `tee.http_client` as well as `tee.base_url`: an ordinary client would
 reach the same address without proving anything about it.
 
+## You need an API key
+
+Every request is checked inside the enclave by the `libertai-models` gateway
+before it reaches the model, so a connection that verifies will still answer
+`401` until LibertAI has issued you a key. Attestation and authorisation are
+separate: verifying tells you *who* you are talking to, the key is what buys
+you an answer.
+
 ## What a connection proves
 
 The server is an AMD SEV-SNP guest whose TLS certificate carries a signed

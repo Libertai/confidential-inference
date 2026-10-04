@@ -20,6 +20,16 @@
 # removed as soon as their image exists; the four images then take ~55 GB.
 set -euo pipefail
 
+# Image bytes depend on file modes, modes depend on the umask, and the verity
+# root hashes -- so the launch measurement -- depend on the bytes. mkfs.ext4 -d
+# copies whatever modes the tree has, and `mkdir`/`curl -o` take theirs from the
+# umask, so an independent rebuild under a different umask produces a different
+# measurement. 0002 is the value the published images were built with: the
+# directories in them are 775 and the fetched model files 664. Group-writability
+# is immaterial in an image mounted read-only under dm-verity; reproducibility
+# is not.
+umask 0002
+
 # Pinned by digest and revision: both are inside the launch measurement, so a
 # floating tag would silently change what a client is asked to trust.
 IMAGE=vllm/vllm-openai@sha256:5f5e535216848d0c52159c8c13a0af04be5f6fe1a84e79914300610796f76d40

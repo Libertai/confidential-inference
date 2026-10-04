@@ -4,8 +4,10 @@
 #   ./verify-images.sh <item-hash> [out-dir]
 #
 # For each image it takes the dm-verity root hash the deployment published, and
-# recomputes it from the local file. Matching root hashes mean the published
-# deployment booted these exact bytes.
+# recomputes it from the local file. Matching root hashes mean the workload and
+# volumes the deployment booted are these exact bytes. The firmware, kernel and
+# initrd come from the runtime bundle the message names, which this does not
+# rebuild.
 #
 # The salt comes from the published hash tree rather than from here, because
 # `veritysetup format` picks a random one unless told otherwise and the CLI that
