@@ -5,7 +5,7 @@
       "deployments": [
         {
           "item_hash": "46bd0223b8ba6b49cda6834217ecce6650fc9e11aac839a838678d3c163cccec",
-          "source_commit": "b5a6720",
+          "source_commit": "bd49dbe",
           "status": "active"
         }
       ]

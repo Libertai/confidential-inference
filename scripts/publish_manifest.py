@@ -9,6 +9,8 @@ client cannot second-guess: a client checks that the manifest was signed by the
 expected address, not that what it says is true. So everything checkable is
 checked here first, and nothing is published unless it all holds:
 
+  * every `source_commit` is a commit of this repository, since a client is told
+    to check it out,
   * every referenced V-PROGRAM message exists and verifies against its hash,
   * every one of them publishes a launch measurement,
   * every active deployment is reachable and proves one of those measurements.
@@ -22,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -43,6 +46,18 @@ def check(manifest: dict) -> list[str]:
         for deployment in entry["deployments"]:
             item_hash = deployment["item_hash"]
             label = f"{model} {item_hash[:12]}"
+
+            # VERIFYING.md tells a reader to `git checkout` this, so a hash from
+            # another repository fails them at the first step.
+            commit = deployment.get("source_commit")
+            if not commit:
+                problems.append(f"{label}: no source_commit")
+            elif subprocess.run(
+                ["git", "-C", str(REPO), "cat-file", "-e", f"{commit}^{{commit}}"],
+                capture_output=True,
+            ).returncode:
+                problems.append(f"{label}: source_commit {commit} is not a commit of this repository")
+
             try:
                 resolved = resolve_deployment(item_hash)
             except Exception as e:
