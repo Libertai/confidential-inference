@@ -79,5 +79,16 @@ jobs:
         working-directory: js
       # No token and no --provenance: the OIDC identity authorises the publish
       # and npm attaches provenance by itself.
-      - run: npm publish --access public
+      #
+      # Skipped when the version is already on the registry, so re-running a
+      # release -- or tagging a version whose npm half went out by hand -- does
+      # not fail the run on an immutable-version 403.
+      - name: publish unless this version is already published
         working-directory: js
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@libertai/confidential-inference@$version" version >/dev/null 2>&1; then
+            echo "@libertai/confidential-inference@$version is already published; skipping"
+          else
+            npm publish --access public
+          fi
