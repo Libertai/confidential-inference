@@ -73,7 +73,10 @@ jobs:
     # claim, and a token minted outside it is refused.
     environment: release
     permissions:
-      id-token: write
+      id-token: write # OIDC, for trusted publishing
+      # Naming any permission zeroes the rest, and checkout needs to read a
+      # private repository.
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
