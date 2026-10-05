@@ -70,13 +70,14 @@ jobs:
       - uses: jetli/wasm-pack-action@v0.4.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Trusted publishing needs npm >= 11.5.1 and node >= 22.14.
+          node-version: 24
           registry-url: https://registry.npmjs.org
       - run: npm install
         working-directory: js
       - run: npm run build
         working-directory: js
-      - run: npm publish --access public --provenance
+      # No token and no --provenance: the OIDC identity authorises the publish
+      # and npm attaches provenance by itself.
+      - run: npm publish --access public
         working-directory: js
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
