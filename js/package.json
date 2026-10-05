@@ -1,6 +1,6 @@
 {
   "name": "@libertai/confidential-inference",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Verify you are talking to LibertAI inference running in an attested confidential VM, then talk to it directly.",
   "license": "MIT",
   "type": "module",

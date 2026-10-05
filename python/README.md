@@ -11,11 +11,11 @@ pip install libertai-confidential-inference openai
 from openai import OpenAI
 from libertai_confidential import connect
 
-tee = connect(model="qwen3.8-27b")
+tee = connect(model="qwen3.8-27b-tee")
 client = OpenAI(api_key=key, base_url=tee.base_url, http_client=tee.http_client)
 
 answer = client.chat.completions.create(
-    model="qwen3.8-27b",
+    model="qwen3.8-27b-tee",
     messages=[{"role": "user", "content": "..."}],
 )
 ```

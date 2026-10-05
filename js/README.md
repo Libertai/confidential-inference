@@ -11,11 +11,11 @@ npm install @libertai/confidential-inference openai
 import OpenAI from "openai";
 import { connect } from "@libertai/confidential-inference";
 
-const tee = await connect({ model: "qwen3.8-27b" });
+const tee = await connect({ model: "qwen3.8-27b-tee" });
 const openai = new OpenAI({ apiKey, baseURL: tee.baseURL, fetch: tee.fetch });
 
 const answer = await openai.chat.completions.create({
-  model: "qwen3.8-27b",
+  model: "qwen3.8-27b-tee",
   messages: [{ role: "user", content: "..." }],
 });
 ```
@@ -71,9 +71,9 @@ prompt was sent, rather than one sent and regretted.
 {
   "source_repo": "https://github.com/Libertai/confidential-inference",
   "models": {
-    "qwen3.8-27b": {
+    "qwen3.8-27b-tee": {
       "deployments": [
-        { "item_hash": "46bd0223b8ba6b49cda6834217ecce6650fc9e11aac839a838678d3c163cccec", "source_commit": "2a2fc8d", "status": "active" }
+        { "item_hash": "<v-program item hash>", "source_commit": "<commit of source_repo>", "status": "active" }
       ]
     }
   }
