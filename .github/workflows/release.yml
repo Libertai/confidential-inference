@@ -60,6 +60,9 @@ jobs:
 
   npm:
     runs-on: ubuntu-latest
+    # Must match the environment on the npm trusted publisher: npm checks the
+    # claim, and a token minted outside it is refused.
+    environment: release
     permissions:
       id-token: write
     steps:
