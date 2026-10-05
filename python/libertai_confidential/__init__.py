@@ -14,6 +14,7 @@ running the model in a TEE at all.
 
 from __future__ import annotations
 
+import ssl
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
@@ -23,7 +24,7 @@ from ._core import AlephError, AttestationError
 from .aleph import DEFAULT_API, fetch_aggregate, fetch_message, verify_message
 from .deployment import DEFAULT_SCHEDULER, Deployment, resolve_deployment
 from .manifest import AGGREGATE_KEY, DEFAULT_PUBLISHER, active_deployments, fetch_manifest
-from .transport import attested_client, attested_ssl_context
+from .transport import attested_client, attested_ssl_context, client_for
 from .verify import TcbFloor, report_facts, verify_certificate
 
 __all__ = [
@@ -37,6 +38,7 @@ __all__ = [
     "fetch_message",
     "report_facts",
     "resolve_deployment",
+    "client_for",
     "verify_certificate",
 ]
 
@@ -46,8 +48,12 @@ class ConfidentialEndpoint:
     #: Pass to an OpenAI-compatible client; ends in ``/v1``, as they expect.
     base_url: str
     #: Pass alongside it: an ordinary client would reach the same address
-    #: without proving anything about it.
-    http_client: httpx.Client
+    #: without proving anything about it. Typed loosely on purpose -- it is an
+    #: ``httpx2.Client`` when that is installed, which is what `openai` 3.x
+    #: annotates, and an ``httpx.Client`` otherwise.
+    http_client: Any
+    #: The context ``http_client`` is pinned to, for building your own client.
+    ssl_context: ssl.SSLContext
     #: V-PROGRAM that answered.
     item_hash: str
     #: Launch measurement it proved, which is what pins the image and flags.
@@ -92,11 +98,13 @@ def connect(
             continue
         for origin in deployment.candidates:
             try:
-                client, measurement = attested_client(origin, deployment.measurements,
-                                                      tcb_floor=tcb_floor)
+                client, context, measurement = attested_client(
+                    origin, deployment.measurements, tcb_floor=tcb_floor
+                )
                 return ConfidentialEndpoint(
                     base_url=f"{origin}/v1",
                     http_client=client,
+                    ssl_context=context,
                     item_hash=entry["item_hash"],
                     measurement=measurement,
                     source_commit=entry.get("source_commit"),

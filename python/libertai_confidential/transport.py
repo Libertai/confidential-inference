@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import socket
 import ssl
-from typing import Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple
 from urllib.parse import urlsplit
 
 import httpx
@@ -23,7 +23,7 @@ import httpx
 from ._net import new_client
 from .verify import AttestationError, TcbFloor, verify_certificate
 
-__all__ = ["attested_ssl_context", "attested_client"]
+__all__ = ["attested_ssl_context", "attested_client", "client_for"]
 
 
 #: How long one address may take to answer before the next candidate is tried.
@@ -84,6 +84,23 @@ def attested_ssl_context(
     return context, measurement
 
 
+def client_for(context: ssl.SSLContext, *, timeout: float = 600.0, **kwargs) -> Any:
+    """A client pinned to ``context``, of the httpx flavour installed here.
+
+    `openai` 3.x annotates ``http_client`` as ``httpx2.Client``, and an
+    ``httpx.Client`` is the wrong type for it even though both work. Building
+    whichever one is present means the returned client is the one the caller's
+    SDK expects, which is why this is typed `Any`: the correct class is a
+    property of their environment, not of this package.
+    """
+    try:
+        import httpx2
+
+        return httpx2.Client(verify=context, timeout=timeout, **kwargs)
+    except ImportError:
+        return httpx.Client(verify=context, timeout=timeout, **kwargs)
+
+
 def attested_client(
     origin: str,
     measurements: Sequence[str],
@@ -91,9 +108,10 @@ def attested_client(
     tcb_floor: Optional[TcbFloor] = None,
     timeout: float = 600.0,
     **kwargs,
-) -> Tuple[httpx.Client, str]:
-    """An ``httpx.Client`` that can only reach the attested peer."""
+) -> Tuple[Any, ssl.SSLContext, str]:
+    """A client that can only reach the attested peer, plus the context it is
+    pinned to, so a caller can build its own."""
     context, measurement = attested_ssl_context(
         origin, measurements, tcb_floor=tcb_floor, client=new_client()
     )
-    return httpx.Client(verify=context, timeout=timeout, **kwargs), measurement
+    return client_for(context, timeout=timeout, **kwargs), context, measurement

@@ -24,7 +24,14 @@ Requests go straight to the enclave. Nothing in between can read the prompt,
 LibertAI included — an intermediary that could would defeat the point.
 
 Pass `tee.http_client` as well as `tee.base_url`: an ordinary client would
-reach the same address without proving anything about it.
+reach the same address without proving anything about it. It is an
+`httpx2.Client` when that is installed — which is what `openai` 3.x expects —
+and an `httpx.Client` otherwise, so it fits whichever SDK you have. To build
+your own instead, `tee.ssl_context` is the context it is pinned to:
+
+```python
+client = httpx2.Client(verify=tee.ssl_context, timeout=600)
+```
 
 ## You need an API key
 

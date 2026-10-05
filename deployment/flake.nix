@@ -84,11 +84,14 @@
         '';
     in
     {
-      # `alias` is the model id clients send and must match MODEL_ALIAS in
-      # model.conf; `upstream` must match the port init.sh gives vLLM.
+      # `alias` is the model id clients send. It must match MODEL_ALIAS in
+      # model.conf, the key in libertai-api's MODELS_CONFIG and the name
+      # vLLM serves: libertai-api health-checks /health/<key> and forwards the
+      # request body unchanged, so a mismatch anywhere reads as "model not
+      # configured". `upstream` must match the port init.sh gives vLLM.
       packages.${system} = rec {
         gateway = mkGateway {
-          alias = "qwen3.8-27b";
+          alias = "qwen3.8-27b-tee";
           upstream = "http://127.0.0.1:8005";
         };
         default = gateway;
