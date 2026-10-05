@@ -32,7 +32,22 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - uses: jetli/wasm-pack-action@v0.4.0
+      # wasm-pack by pinned binary rather than jetli/wasm-pack-action, which is
+      # unmaintained (last release 2023) and still targets the deprecated Node 20.
+      # The checksum is what makes an unsigned download safe to run in a job that
+      # can publish packages.
+      - name: install wasm-pack
+        run: |
+          version=0.15.0
+          tarball=wasm-pack-v$version-x86_64-unknown-linux-musl
+          curl -fsSL -o wasm-pack.tar.gz \
+            "https://github.com/rustwasm/wasm-pack/releases/download/v$version/$tarball.tar.gz"
+          echo "c09f971ecaed9a2efc80fdcea7a00ef6b53c7fadc8c57d1f61b53a6aa66b668a  wasm-pack.tar.gz" \
+            | sha256sum -c -
+          tar -xzf wasm-pack.tar.gz
+          sudo install -m 0755 "$tarball/wasm-pack" /usr/local/bin/wasm-pack
+          rm -rf wasm-pack.tar.gz "$tarball"
+          wasm-pack --version
       - uses: actions/setup-node@v7
         with:
           node-version: 22
