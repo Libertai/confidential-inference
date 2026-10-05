@@ -1,11 +1,11 @@
 {
   "source_repo": "https://github.com/Libertai/confidential-inference",
   "models": {
-    "qwen3.8-27b": {
+    "qwen3.8-27b-tee": {
       "deployments": [
         {
-          "item_hash": "46bd0223b8ba6b49cda6834217ecce6650fc9e11aac839a838678d3c163cccec",
-          "source_commit": "bd49dbe",
+          "item_hash": "44a6d03ec5ab108a4aac13def0951714b209295d0acef1fcc2e979c4c1f2da39",
+          "source_commit": "2385a9f",
           "status": "active"
         }
       ]
