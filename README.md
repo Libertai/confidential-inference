@@ -44,7 +44,7 @@ and attestation just fails.
 | --- | --- |
 | `core/` | The verification itself, in Rust. No network, no platform assumptions. |
 | `wasm/`, `js/`, `python/` | Bindings and clients. They wrap the same compiled core, so there is one implementation of the checks rather than one per language. |
-| `deployment/` | What the enclave runs: guest init, vLLM flags, the gateway. Every input to the measurement is pinned here. |
+| `deployment/` | What the enclave runs: guest init, the gateway, and one directory per model under `models/` holding its image pins and serving flags. Every input to the measurement is pinned here. |
 
 The clients are [`@libertai/confidential-inference`](js) for Node and
 [`libertai-confidential-inference`](python) for Python.

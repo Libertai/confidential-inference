@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds the four images of the confidential-GPU vLLM V-PROGRAM into $OUT
-# (default ./out):
+# Builds the four images of a confidential-GPU vLLM V-PROGRAM into $OUT
+# (default ./out/<model>):
 #
 #   workload.ext4   busybox + init.sh + model.conf
 #   vllm-runtime.ext4   root filesystem of the pinned vllm-openai image
@@ -11,10 +11,14 @@
 # flake.lock, so the same commit of this repository rebuilds the same images.
 # See ../VERIFYING.md for how to check that against a published deployment.
 #
-# Usage: build.sh [--models-rev <sha|latest>]
-#   The gateway's source revision. Defaults to the commit in flake.lock, which
-#   is what lets a rebuild reproduce a published measurement; `latest` takes
-#   the newest commit on the default branch instead, for cutting a new one.
+# Usage: build.sh [--model <alias>] [--models-rev <sha|latest>]
+#
+#   --model       Which directory under models/ to build. Optional while there
+#                 is only one.
+#   --models-rev  The gateway's source revision. Defaults to the commit in
+#                 flake.lock, which is what lets a rebuild reproduce a published
+#                 measurement; `latest` takes the newest commit on the default
+#                 branch instead, for cutting a new one.
 #
 # Needs ~75 GB free. The checkpoint tree and the rootfs tarball are each
 # removed as soon as their image exists; the four images then take ~55 GB.
@@ -30,25 +34,16 @@ set -euo pipefail
 # is not.
 umask 0002
 
-# Pinned by digest and revision: both are inside the launch measurement, so a
-# floating tag would silently change what a client is asked to trust.
-IMAGE=vllm/vllm-openai@sha256:5f5e535216848d0c52159c8c13a0af04be5f6fe1a84e79914300610796f76d40
-MODEL_REPO=Qwen/Qwen3.8-27B-FP8
-MODEL_REV=017b9c7af6b5689d5dd426a76e0bc077eb5ca20a
-MODEL_NAME=qwen3.8-27b-fp8
-
-OUT=${OUT:-$PWD/out}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-mkdir -p "$OUT"
 
-LOCKED_REV=$(python3 -c '
-import json, sys
-lock = json.load(open(sys.argv[1]))
-print(lock["nodes"]["libertai-models"]["locked"]["rev"])
-' "$here/flake.lock")
-MODELS_REV=$LOCKED_REV
+ALIAS=
+MODELS_REV=
 while [ $# -gt 0 ]; do
     case $1 in
+        --model)
+            ALIAS=$2
+            shift 2
+            ;;
         --models-rev)
             MODELS_REV=$2
             shift 2
@@ -56,11 +51,47 @@ while [ $# -gt 0 ]; do
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
+
+if [ -z "$ALIAS" ]; then
+    for d in "$here"/models/*/; do
+        [ -f "$d/model.json" ] || continue
+        [ -z "$ALIAS" ] || { echo "several models: pass --model <alias>" >&2; ls "$here/models" >&2; exit 2; }
+        ALIAS=$(basename "$d")
+    done
+fi
+model_dir=$here/models/$ALIAS
+[ -f "$model_dir/model.json" ] || { echo "no models/$ALIAS/model.json" >&2; exit 2; }
+
+field() { python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$model_dir/model.json" "$1"; }
+# Pinned by digest and revision: both are inside the launch measurement, so a
+# floating tag would silently change what a client is asked to trust.
+IMAGE=$(field image)
+MODEL_REPO=$(field modelRepo)
+MODEL_REV=$(field modelRev)
+MODEL_NAME=$(field modelName)
+
+# The gateway reads the alias from model.json and vLLM from model.conf. They
+# have to be the same string or the gateway proxies to a model vLLM does not
+# serve, which only shows up as a 404 at request time.
+conf_alias=$(. "$model_dir/model.conf" >/dev/null 2>&1; echo "$MODEL_ALIAS")
+[ "$conf_alias" = "$(field alias)" ] ||
+    { echo "models/$ALIAS: model.conf says $conf_alias, model.json says $(field alias)" >&2; exit 2; }
+
+OUT=${OUT:-$PWD/out/$ALIAS}
+mkdir -p "$OUT"
+
+LOCKED_REV=$(python3 -c '
+import json, sys
+lock = json.load(open(sys.argv[1]))
+print(lock["nodes"]["libertai-models"]["locked"]["rev"])
+' "$here/flake.lock")
+MODELS_REV=${MODELS_REV:-$LOCKED_REV}
 if [ "$MODELS_REV" = latest ]; then
     MODELS_REV=$(curl -fsSL https://api.github.com/repos/Libertai/libertai-models/commits/main |
         python3 -c 'import json,sys;print(json.load(sys.stdin)["sha"])')
 fi
 # Printed because a deployment is only reproducible if this is recorded with it.
+echo "==> model $ALIAS"
 echo "==> libertai-models $MODELS_REV"
 
 export SOURCE_DATE_EPOCH=0
@@ -87,7 +118,7 @@ mkdir -p "$wl"/{bin,sbin,etc/libertai,volumes,proc,sys,dev,run,mnt,tmp/secrets,o
 ln -s /volumes/2/nix "$wl/nix"
 cp "$(nix build --no-link --print-out-paths nixpkgs#pkgsStatic.busybox)/bin/busybox" "$wl/bin/busybox"
 cp "$here/init.sh" "$wl/sbin/init"
-cp "$here/model.conf" "$wl/etc/libertai/model.conf"
+cp "$model_dir/model.conf" "$wl/etc/libertai/model.conf"
 touch "$wl/etc/resolv.conf"
 chmod 0755 "$wl/bin/busybox" "$wl/sbin/init"
 mkfs_from_dir "$wl" "$OUT/workload.ext4"
@@ -139,7 +170,7 @@ if [ ! -f "$gw" ]; then
     override=()
     [ "$MODELS_REV" = "$LOCKED_REV" ] ||
         override=(--override-input libertai-models "github:Libertai/libertai-models/$MODELS_REV")
-    cp "$(nix build --no-link --print-out-paths "${override[@]}" "$here#gateway")" "$gw"
+    cp "$(nix build --no-link --print-out-paths "${override[@]}" "$here#gateway-$ALIAS")" "$gw"
     chmod 644 "$gw"
 fi
 

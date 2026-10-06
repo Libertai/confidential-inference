@@ -16,6 +16,18 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      lib = nixpkgs.lib;
+
+      # One directory per model under ./models, each with a model.json. The
+      # same files drive build.sh, so the alias cannot differ between the
+      # gateway's config and the image the guest boots.
+      models = lib.mapAttrs
+        (name: _: builtins.fromJSON (builtins.readFile (./models + "/${name}/model.json")))
+        (lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./models));
+
+      # init.sh gives vLLM this port, and the guest has no /etc/hosts, so it has
+      # to be an address rather than `localhost`.
+      upstream = "http://127.0.0.1:8005";
 
       # The on-instance gateway: API-key gating, usage reporting, and the
       # /health/<model> endpoint libertai-api probes before it will route here.
@@ -84,17 +96,13 @@
         '';
     in
     {
-      # `alias` is the model id clients send. It must match MODEL_ALIAS in
-      # model.conf, the key in libertai-api's MODELS_CONFIG and the name
-      # vLLM serves: libertai-api health-checks /health/<key> and forwards the
-      # request body unchanged, so a mismatch anywhere reads as "model not
-      # configured". `upstream` must match the port init.sh gives vLLM.
-      packages.${system} = rec {
-        gateway = mkGateway {
-          alias = "qwen3.8-27b-tee";
-          upstream = "http://127.0.0.1:8005";
-        };
-        default = gateway;
-      };
+      # One `gateway-<alias>` per model directory. The alias is the model id
+      # clients send; it must also be the key in libertai-api's models.json,
+      # which health-checks /health/<alias> and forwards the body unchanged, so
+      # a mismatch anywhere reads as "model not configured".
+      packages.${system} = lib.mapAttrs'
+        (_: model: lib.nameValuePair "gateway-${model.alias}"
+          (mkGateway { inherit (model) alias; inherit upstream; }))
+        models;
     };
 }

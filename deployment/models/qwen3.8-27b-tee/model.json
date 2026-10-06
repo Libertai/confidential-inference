@@ -1,0 +1,7 @@
+{
+  "alias": "qwen3.8-27b-tee",
+  "image": "vllm/vllm-openai@sha256:5f5e535216848d0c52159c8c13a0af04be5f6fe1a84e79914300610796f76d40",
+  "modelRepo": "Qwen/Qwen3.8-27B-FP8",
+  "modelRev": "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a",
+  "modelName": "qwen3.8-27b-fp8"
+}
