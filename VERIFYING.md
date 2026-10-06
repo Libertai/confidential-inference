@@ -18,13 +18,13 @@ measurement. (2) is what makes that measurement mean something.
 ```python
 from libertai_confidential import connect
 
-tee = connect(item_hash="44a6d03ec5ab108a4aac13def0951714b209295d0acef1fcc2e979c4c1f2da39")
+tee = connect(item_hash="66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb")
 print(tee.base_url, tee.measurement)
 ```
 
 ```js
 import { connect } from "@libertai/confidential-inference";
-const tee = await connect({ itemHash: "44a6d03ec5ab108a4aac13def0951714b209295d0acef1fcc2e979c4c1f2da39" });
+const tee = await connect({ itemHash: "66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb" });
 ```
 
 Either call throws unless every check passes. The V-PROGRAM message is
@@ -120,14 +120,14 @@ the image, and the umask decides them for anything the script creates.
 
 | | |
 | --- | --- |
-| Item hash | `44a6d03ec5ab108a4aac13def0951714b209295d0acef1fcc2e979c4c1f2da39` |
-| Measurement (EPYC-Genoa) | `110c2983a25701d97e2364ab2ddaba1ba1a12cfb407c76a744791bf8f55ff0c72363226ae55a6f082028fc1604cea155` |
-| Measurement (EPYC-v4) | `42945dab3d5940d6a58c16cfb30d8eeed688974418eff60bed7ac99e3a9cbfd2c41b520748d8eb8876575d790ffe904f` |
+| Item hash | `66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb` |
+| Measurement (EPYC-Genoa) | `925def0a98b84cdf5bce410d06f62f8b94b2a5591238ed014c6f944293c3b4e14fc6d79daa9bd3d49975c4a9fa4e90f0` |
+| Measurement (EPYC-v4) | `52097f20d264d9765c39f382d885d701a1b8a93e3ddcbc583983e3d777dca38e965a331156c5351ade5c06c0bf4c329e` |
 | `libertai-models` | `b403c1a5c873fcf7fa2170c2a6de825fdf59ed27` |
 | nixpkgs | `3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2` |
 | vLLM image | `vllm/vllm-openai@sha256:5f5e535216848d0c52159c8c13a0af04be5f6fe1a84e79914300610796f76d40` |
 | Model | `Qwen/Qwen3.8-27B-FP8` at `017b9c7af6b5689d5dd426a76e0bc077eb5ca20a` |
-| Shape | 32 vCPU, 64 GiB, 1× H200 (`10de:233b`) in CC mode |
+| Shape | 16 vCPU, 32 GiB, 1× H200 (`10de:233b`) in CC mode |
 | Runtime bundle | `1a5ee478326730db94f8674d9756bbdcfbf52aa54953a081da42bcfe46308de1` |
 
 ## What this does not establish

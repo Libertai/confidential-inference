@@ -4,8 +4,8 @@
     "qwen3.8-27b-tee": {
       "deployments": [
         {
-          "item_hash": "44a6d03ec5ab108a4aac13def0951714b209295d0acef1fcc2e979c4c1f2da39",
-          "source_commit": "2385a9f",
+          "item_hash": "66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb",
+          "source_commit": "3f9a774",
           "status": "active"
         }
       ]
