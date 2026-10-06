@@ -1,19 +1,15 @@
 # Verifying a deployment
 
-Two things have to hold, and neither implies the other:
+There are two separate checks, and you need both:
 
-1. **The peer is the enclave the deployment published.** AMD endorses its
-   attestation report, the guest is not debuggable, the report commits to the
-   TLS key being served, and the launch measurement is one the V-PROGRAM
-   message published. The client libraries establish this on every connection.
-2. **That deployment booted bytes you can read.** The images are rebuilt from
-   this repository and checked against the dm-verity root hashes the deployment
-   published. Done once per release, by anyone, offline.
+1. **The server you reach is the enclave the deployment published.** The client
+   libraries do this on every connection.
+2. **That deployment booted images you can rebuild from this repository.** Done
+   once per release, offline, by anyone.
 
-(1) alone proves you are talking to *some* enclave whose operator published a
-measurement. (2) is what makes that measurement mean something.
+The first identifies the enclave. The second tells you what is inside it.
 
-## 1. Verify the live endpoint
+## 1. Check the live endpoint
 
 ```python
 from libertai_confidential import connect
@@ -27,18 +23,14 @@ import { connect } from "@libertai/confidential-inference";
 const tee = await connect({ itemHash: "66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb" });
 ```
 
-Either call throws unless every check passes. The V-PROGRAM message is
-content-addressed and signed, so this trusts no Aleph node: see
-[`README.md`](README.md).
+Either call fails unless every check passes. The deployment message is
+content-addressed and signed, so this trusts no Aleph node; the checks
+themselves are listed in [`README.md`](README.md).
 
-A verified connection is not an authorised one. The enclave answers `401` until
-LibertAI issues you an API key, which is checked by the gateway inside the
-enclave rather than in front of it.
-
-## 2. Check the images
+## 2. Rebuild the images
 
 Needs Linux on x86_64, [Nix](https://nixos.org/download/) with flakes,
-`veritysetup`, and ~75 GB of free disk.
+`veritysetup`, and about 75 GB of free disk.
 
 ```bash
 git clone https://github.com/Libertai/confidential-inference
@@ -53,30 +45,30 @@ OUT=/var/tmp/cci ./deployment/build.sh          # ~55 GB of images
 git-ignored.
 
 `build.sh` prints the `libertai-models` revision it used. It defaults to the
-commit in `deployment/flake.lock`, which is the one the published deployment
-was built from; `--models-rev <sha|latest>` overrides it, and a different
-revision produces different bytes.
+commit in `deployment/flake.lock`, which is the one the published deployment was
+built from. `--models-rev <sha|latest>` overrides it, and a different revision
+produces different bytes.
 
-`verify-images.sh` takes each root hash the deployment published and recomputes
-it from the local file. All four matching means the workload and the volumes the
-enclave booted are these exact bytes -- the model, the serving flags, the
-gateway and the guest init. The firmware, kernel and initrd come from the Aleph
+`verify-images.sh` takes each dm-verity root hash the deployment published and
+recomputes it from the local file. Four matches mean the workload and volumes
+the enclave booted are these exact bytes: the model, the serving flags, the
+gateway and the guest init. Firmware, kernel and initrd come from the Aleph
 runtime bundle the message names; the measurement covers them, but nothing here
 rebuilds them.
 
-### Why the salt comes from the published hash tree
+### Where the salt comes from
 
-A dm-verity root hash is a hash of the image *and a salt*, and
-`veritysetup format` picks a random salt unless told otherwise. The CLI that
-publishes a V-PROGRAM does not tell it otherwise
-([`aleph-cli/src/veritysetup.rs`](https://github.com/aleph-im/aleph-rs)), so
-the root hash — and therefore the launch measurement — is different on every
-publish of byte-identical images.
+A dm-verity root hash covers the image and a salt, and `veritysetup format`
+picks a random salt unless told otherwise. The CLI that publishes a V-PROGRAM
+does not tell it otherwise
+([`aleph-rs`](https://github.com/aleph-im/aleph-rs)), so byte-identical images
+publish under a different root hash, and therefore a different measurement,
+every time.
 
-So a root hash cannot be recomputed from an image alone. It can be recomputed
-from the image plus the salt the publisher used, and that salt is in the
-superblock of the hash tree they published, which `verify-images.sh` downloads
-and reads. The chain still closes:
+A root hash is therefore not recomputable from an image alone, but it is from
+the image plus the salt the publisher used. That salt sits in the superblock of
+the hash tree they published, which `verify-images.sh` downloads and reads. The
+chain still closes:
 
 ```
 rebuilt bytes --(published salt)--> published root hash
@@ -84,12 +76,11 @@ rebuilt bytes --(published salt)--> published root hash
     --(SNP report)--> the enclave answering your request
 ```
 
-What the random salt costs is not soundness but stability: identical images
-publish under different measurements, so a measurement names one deployment
-rather than a release, and it cannot be known before publishing. Passing a
-fixed salt upstream would make it a function of the images alone.
+The random salt costs stability rather than soundness: a measurement names one
+deployment rather than a release, and cannot be known before publishing. Passing
+a fixed salt upstream would make it a function of the images alone.
 
-## What is pinned, and why it has to be
+## What goes into the measurement
 
 The launch measurement covers the firmware, kernel, initrd, kernel command line
 and the VMSA of every vCPU. The command line carries the dm-verity root hash of
@@ -107,14 +98,14 @@ digest.
 | Guest init | `deployment/init.sh` | the workload image |
 | vCPU count and memory | the publish command | the VMSA, so the digest directly |
 
-The last row surprises people: asking for different memory or a different vCPU
+The last row catches people out: asking for different memory or a different vCPU
 count changes the measurement even though no file changed.
 
-Images have to be byte-reproducible for any of this to work, which is why
+The images have to be byte-reproducible for any of this to work. That is why
 `mkfs.ext4` gets a fixed UUID, a fixed non-zero hash seed, no journal and
-non-lazy init, why trees are built under `fakeroot` so ownership does not depend
-on who ran the build, and why `build.sh` pins its own `umask`: file modes land in
-the image, and the umask decides them for anything the script creates.
+non-lazy init; why trees are built under `fakeroot`, so ownership does not depend
+on who ran the build; and why `build.sh` pins its own `umask`, since file modes
+land in the image.
 
 ## Current deployment
 
@@ -130,16 +121,14 @@ the image, and the umask decides them for anything the script creates.
 | Shape | 16 vCPU, 32 GiB, 1× H200 (`10de:233b`) in CC mode |
 | Runtime bundle | `1a5ee478326730db94f8674d9756bbdcfbf52aa54953a081da42bcfe46308de1` |
 
-## What this does not establish
+## Limits
 
-- **That the model behaves.** The measurement pins which weights and which
-  serving flags booted, not what the model says.
-- **That the platform is patched.** A chip on vulnerable firmware still gets a
-  valid VCEK. That is policy, so the clients take a `tcbFloor` from the caller
-  instead of deciding it.
-- **That the deployment still exists.** A deployment is revoked by deleting its
-  V-PROGRAM, not by editing the manifest: a stale manifest can be served to a
-  client, but a deleted enclave cannot answer it.
-- **The runtime bundle.** Firmware, kernel and initrd come from the Aleph
-  runtime named above, not from this repository, and reproducing those is a
-  question for [aleph-vm](https://github.com/aleph-im/aleph-vm).
+- The measurement pins which weights and which serving flags booted, not what
+  the model says.
+- A chip running vulnerable firmware still gets a valid VCEK, so firmware
+  currency is a policy decision the clients take from the caller as `tcbFloor`.
+- A deployment is revoked by deleting it, not by editing the manifest: a stale
+  manifest can be served to a client, but a deleted enclave cannot answer it.
+- Firmware, kernel and initrd come from the Aleph runtime bundle named above
+  rather than from this repository. Reproducing those is a question for
+  [aleph-vm](https://github.com/aleph-im/aleph-vm).
