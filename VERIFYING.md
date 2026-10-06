@@ -103,8 +103,19 @@ reaches one it can verify.
 
 Each deployment publishes its own launch measurements, since the verity salt is
 random per publish; they are in the V-PROGRAM message, which is what the clients
-and `verify-images.sh` read. What a model pins is in
-`deployment/models/<model>/`, at the commit named above.
+and `verify-images.sh` read.
+
+Everything a deployment was built from is in this repository at its
+`source_commit`, so checking that commit out is how you see it:
+
+| What | Where, at that commit |
+| --- | --- |
+| vLLM image digest, checkpoint repository and revision | `deployment/models/<model>/model.json` |
+| vLLM serving flags and the alias | `deployment/models/<model>/model.conf` |
+| `libertai-models` and nixpkgs revisions | `deployment/flake.lock` |
+
+`build.sh` prints the `libertai-models` revision it builds with, so you can see
+it matches without reading the lock file.
 
 Runtime bundle for all of them:
 `1a5ee478326730db94f8674d9756bbdcfbf52aa54953a081da42bcfe46308de1`.
