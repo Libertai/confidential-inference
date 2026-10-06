@@ -1,7 +1,8 @@
 # libertai-confidential-inference
 
-Talk to LibertAI inference running in a confidential VM, having first
-established what it is.
+A client for LibertAI models that run inside AMD SEV-SNP virtual machines, where
+the operator of the machine cannot read the requests being processed. It checks
+the server's attestation before sending anything.
 
 ```bash
 pip install libertai-confidential-inference openai
@@ -20,70 +21,49 @@ answer = client.chat.completions.create(
 )
 ```
 
-Requests go straight to the enclave. Nothing in between can read the prompt,
-LibertAI included — an intermediary that could would defeat the point.
+API keys come from [console.libertai.io](https://console.libertai.io). Requests
+go straight to the enclave, so nothing in between can read them, LibertAI's API
+included.
 
-Pass `tee.http_client` as well as `tee.base_url`: an ordinary client would
-reach the same address without proving anything about it. It is an
-`httpx2.Client` when that is installed — which is what `openai` 3.x expects —
-and an `httpx.Client` otherwise, so it fits whichever SDK you have. To build
-your own instead, `tee.ssl_context` is the context it is pinned to:
+Pass `tee.http_client` along with `tee.base_url`: an ordinary client reaches the
+same address without checking anything about it. It is an `httpx2.Client` when
+that is installed, which is what `openai` 3.x expects, and an `httpx.Client`
+otherwise. To build your own, `tee.ssl_context` is the context it is pinned to:
 
 ```python
 client = httpx2.Client(verify=tee.ssl_context, timeout=600)
 ```
 
-## You need an API key
+## connect(...)
 
-Every request is checked inside the enclave by the `libertai-models` gateway
-before it reaches the model, so a connection that verifies will still answer
-`401` until LibertAI has issued you a key. Attestation and authorisation are
-separate: verifying tells you *who* you are talking to, the key is what buys
-you an answer.
+| Argument | |
+| --- | --- |
+| `model` | Use the active deployment for that model. |
+| `item_hash` | Pin one deployment and skip discovery. |
+| `tcb_floor` | Reject CPUs below a firmware version. Raise it when AMD publishes an advisory. |
+| `publisher`, `api`, `scheduler` | Override the manifest publisher and the Aleph endpoints. |
 
-## What a connection proves
+Returns a `ConfidentialEndpoint` with `base_url`, `http_client`, `ssl_context`,
+`item_hash`, `measurement` and `source_commit`, or raises if the server fails
+any check, in which case no request was sent.
 
-The server is an AMD SEV-SNP guest whose TLS certificate carries a signed
-attestation report. `connect` fetches that certificate on a throwaway
-connection, and only once it has established all of the following does it pin
-it as the sole trust anchor for the client that carries requests:
+`model` is resolved through a manifest signed by LibertAI, naming a deployment
+message whose hash the client recomputes from its content. The address itself
+comes from a scheduler that is not trusted: a wrong host just fails attestation.
 
-1. **AMD endorses the report** — ARK → ASK → VCEK → report. AMD's roots are
-   compiled in, so trust ends at AMD rather than at whoever served the
-   certificate. Only the per-chip VCEK is fetched, and it is self-authenticating.
-2. **The guest is not debuggable** — otherwise the host could read its memory
-   and every other check would be decorative.
-3. **The report commits to the key being served** — otherwise a genuine report
-   could be relayed in front of an attacker's key.
-4. **The launch measurement is one the deployment published** — this is what
-   ties the peer to a specific image, model and set of serving flags.
+## What gets checked
 
-A peer that fails is never sent a prompt, and a peer that passes cannot be
-swapped for another afterwards.
+Before the first byte of a request is written:
 
-## What it does not prove
+- AMD signed the attestation report, through ARK → ASK → VCEK. Only the per-chip
+  VCEK is fetched, and it is self-authenticating.
+- The report is bound to the TLS key being served, so a genuine report cannot be
+  replayed in front of someone else's key.
+- The launch measurement is one the deployment published, which is what ties the
+  server to a specific model, image and set of serving flags.
+- The guest is not debuggable, which would otherwise let the host read its
+  memory.
 
-- **That the workload deserves trust.** The measurement pins *which* image
-  booted, not what it does. The manifest names the `source_commit` the images
-  were built from; the point of publishing it is that anyone can rebuild them
-  and check that the measurement is the one they get.
-- **That the platform is patched.** A chip running vulnerable firmware still
-  gets a valid VCEK. Firmware currency is policy, so it is a caller's decision:
-  pass `tcb_floor=TcbFloor(...)` to set one, and raise it when AMD publishes an
-  advisory.
-
-## Discovery
-
-`connect(model=...)` reads a manifest published as a signed Aleph aggregate.
-No node is trusted along the way: the manifest is verified against the
-publisher's signature, each `item_hash` names a V-PROGRAM message whose content
-the client re-hashes, and the measurements come from there. Which machine runs
-it and at which address are hints from an untrusted scheduler — point a client
-at the wrong host and attestation fails.
-
-Use `connect(item_hash=...)` to pin one deployment and skip discovery entirely.
-
-## One implementation of the checks
-
-Hashing, signature recovery and report verification live in a Rust core shared
-with the JavaScript client, so there is nothing for the two to disagree about.
+A measurement identifies which image booted, not what that image does. To check
+that, rebuild it from source and compare:
+[VERIFYING.md](https://github.com/Libertai/confidential-inference/blob/main/VERIFYING.md).

@@ -1,61 +1,76 @@
 # confidential-inference
 
-Client-side verification for LibertAI inference running in a confidential VM.
+LibertAI runs some models inside AMD SEV-SNP virtual machines, where the
+operator of the machine cannot read the requests being processed. This
+repository holds the client libraries that confirm a server really is one of
+those VMs before sending it anything, and the build recipe for the VM itself.
 
-The server is an Aleph V-PROGRAM: an AMD SEV-SNP guest with measured boot,
-serving an OpenAI-compatible API behind RA-TLS. Its TLS certificate carries an
-SNP attestation report, so a client can decide *before sending a prompt* that it
-is talking to the published workload and not to a host that can read it.
+The check runs in the client, against AMD's signature chain and a measurement
+published on Aleph, so it does not depend on trusting LibertAI.
 
-## Layout
+## How it works
 
-- `core/` — `confidential-inference-core`, the verification itself. No network,
-  no platform assumptions; builds for `wasm32-unknown-unknown`.
-- `wasm/` — `wasm-bindgen` wrapper, so JavaScript runs the same checks rather
-  than a second implementation of them.
-- `js/` — `@libertai/confidential-inference`: discovery, an attesting
-  transport, and a `fetch` to hand to the OpenAI SDK.
-- `python/` — `libertai-confidential-inference`: the same, as an `httpx` client
-  pinned to the peer it verified.
-- `deployment/` — what the enclave runs: the guest init, the vLLM serving
-  flags, and the gateway volume. Everything that ends up in the launch
-  measurement is pinned here, so a rebuild from a given commit reproduces a
-  published deployment.
+The model server is an Aleph V-PROGRAM: a SEV-SNP VM with measured boot. As the
+VM starts, the CPU hashes everything that defines it (firmware, kernel, kernel
+command line, and the dm-verity root hash of each disk image) into a single
+value, the launch measurement. The CPU will then sign reports containing that
+value, with a key AMD vouches for.
 
-Rebuilding a deployment and checking its measurement is
-[`VERIFYING.md`](VERIFYING.md).
+The VM serves HTTPS with a certificate it generates at boot, and embeds one of
+those signed reports in the certificate. The report commits to that
+certificate's public key.
 
-## What a verified connection means
+So during the TLS handshake a client checks four things:
 
-`verify(cert_der, vcek_der, expected_measurements)` establishes, in order:
+1. AMD signed the report (ARK → ASK → VCEK → report).
+2. The report is bound to the key the server is actually using. Without this,
+   someone could relay a real enclave's report in front of their own key.
+3. The launch measurement is one this deployment published. That is what ties
+   the peer to a specific model, image and set of serving flags.
+4. The guest is not debuggable, which would otherwise let the host read the
+   guest's memory directly.
 
-1. **AMD endorses the report** — ARK → ASK → VCEK → report. The ARK and ASK are
-   compiled in from the `sev` crate, so trust ends at AMD, not at whoever served
-   the certificate. Only the per-chip VCEK is fetched (`vcek_url`), and it is
-   self-authenticating.
-2. **The guest is not debuggable** — `DEBUG_ALLOWED` would let the host read
-   guest memory, which makes every other check decorative.
-3. **The report commits to the served TLS key** — otherwise a genuine report
-   can be relayed in front of an attacker's key.
-4. **The measurement is one the deployment published** — this is what ties the
-   peer to a specific workload image, model and serving flags.
+If any of them fails the client refuses the connection, so nothing is sent.
 
-Firmware currency is policy rather than fact, so `chain::check_tcb` takes the
-floor from the caller instead of hardcoding one that goes stale.
+Where the expected measurement comes from matters too. The client reads it from
+the deployment's Aleph message, whose hash is the hash of its own content, and
+that message is named by a manifest signed by LibertAI. The address and port
+come from a scheduler the client does not trust: point it at the wrong machine
+and attestation just fails.
+
+## What's here
+
+| | |
+| --- | --- |
+| `core/` | The verification itself, in Rust. No network, no platform assumptions. |
+| `wasm/`, `js/`, `python/` | Bindings and clients. They wrap the same compiled core, so there is one implementation of the checks rather than one per language. |
+| `deployment/` | What the enclave runs: guest init, vLLM flags, the gateway. Every input to the measurement is pinned here. |
+
+The clients are [`@libertai/confidential-inference`](js) for Node and
+[`libertai-confidential-inference`](python) for Python.
+
+## Checking a deployment yourself
+
+A measurement identifies an image, not its contents. To see what the image
+actually holds, rebuild it from `deployment/` and compare the result against
+what the deployment published. [`VERIFYING.md`](VERIFYING.md) walks through it;
+you need Linux, Nix and about 75 GB of disk.
 
 ## Tests
 
-`core/tests/` runs against a certificate captured from the live H200
-deployment and the measurements from its published Aleph message, so the tests
-fail if either wire format drifts.
+The fixtures are a real certificate captured from the live deployment and the
+real VCEK AMD issued for that chip, so the tests break if a wire format drifts.
 
-    cargo test
-    # inspect needs a captured certificate; see the example's own header
-    openssl s_client -connect <host>:<port> </dev/null 2>/dev/null |
-      openssl x509 -outform der -out cert.der
-    cargo run -p confidential-inference-core --example inspect -- cert.der
-    cd js && npm run build && npm test
-    cd python && maturin develop && pytest
+```bash
+cargo test
+cd js && npm run build && npm test
+cd python && maturin develop && pytest
+```
 
-Building the deployment images needs Linux, Nix and ~75 GB of disk; see
-[`VERIFYING.md`](VERIFYING.md).
+To inspect a certificate by hand:
+
+```bash
+openssl s_client -connect <host>:<port> </dev/null 2>/dev/null |
+  openssl x509 -outform der -out cert.der
+cargo run -p confidential-inference-core --example inspect -- cert.der
+```

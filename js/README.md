@@ -1,7 +1,8 @@
 # @libertai/confidential-inference
 
-Talk to LibertAI inference running in a confidential VM, having first
-established what it is.
+A client for LibertAI models that run inside AMD SEV-SNP virtual machines, where
+the operator of the machine cannot read the requests being processed. It checks
+the server's attestation before sending anything.
 
 ```bash
 npm install @libertai/confidential-inference openai
@@ -20,95 +21,49 @@ const answer = await openai.chat.completions.create({
 });
 ```
 
-Requests go straight to the enclave. Nothing in between can read the prompt,
-LibertAI included — an intermediary that could would defeat the point.
+API keys come from [console.libertai.io](https://console.libertai.io). Requests
+go straight to the enclave, so nothing in between can read them, LibertAI's API
+included.
 
-Pass `tee.fetch` as well as `tee.baseURL`: the default `fetch` would reach the
-same address without proving anything about it.
+Pass `tee.fetch` along with `tee.baseURL`: the built-in `fetch` reaches the same
+address without checking anything about it.
 
-## You need an API key
+## connect(options)
 
-Every request is checked inside the enclave by the `libertai-models` gateway
-before it reaches the model, so a connection that verifies will still answer
-`401` until LibertAI has issued you a key. Attestation and authorisation are
-separate: verifying tells you *who* you are talking to, the key is what buys
-you an answer.
+| Option | |
+| --- | --- |
+| `model` | Use the active deployment for that model. |
+| `itemHash` | Pin one deployment and skip discovery. |
+| `tcbFloor` | Reject CPUs below a firmware version. Raise it when AMD publishes an advisory. |
+| `signal` | `AbortSignal`. |
+| `publisher`, `api`, `scheduler` | Override the manifest publisher and the Aleph endpoints. |
 
-## What a connection proves
+Resolves to `{ baseURL, fetch, itemHash, measurement, sourceCommit }`, or throws
+if the server fails any check, in which case no request was sent.
 
-The server is an AMD SEV-SNP guest whose TLS certificate carries a signed
-attestation report. Before the first byte of a request is written, the client
-establishes that:
+`model` is resolved through a manifest signed by LibertAI, naming a deployment
+message whose hash the client recomputes from its content. The address itself
+comes from a scheduler that is not trusted: a wrong host just fails attestation.
 
-1. **AMD endorses the report** — ARK → ASK → VCEK → report. AMD's roots are
-   compiled in, so trust ends at AMD rather than at whoever served the
-   certificate. Only the per-chip VCEK is fetched, and it is self-authenticating.
-2. **The guest is not debuggable** — otherwise the host could read its memory
-   and every other check would be decorative.
-3. **The report commits to the key being served** — otherwise a genuine report
-   could be relayed in front of an attacker's key.
-4. **The launch measurement is one the deployment published** — this is what
-   ties the peer to a specific image, model and set of serving flags.
+## What gets checked
 
-If any of those fail the connection is refused, so a failed check means no
-prompt was sent, rather than one sent and regretted.
+Before the first byte of a request is written:
 
-## What it does not prove
+- AMD signed the attestation report, through ARK → ASK → VCEK. Only the per-chip
+  VCEK is fetched, and it is self-authenticating.
+- The report is bound to the TLS key being served, so a genuine report cannot be
+  replayed in front of someone else's key.
+- The launch measurement is one the deployment published, which is what ties the
+  server to a specific model, image and set of serving flags.
+- The guest is not debuggable, which would otherwise let the host read its
+  memory.
 
-- **That the workload deserves trust.** The measurement pins *which* image
-  booted, not what it does. The manifest names the `source_commit` the images
-  were built from; the point of publishing it is that anyone can rebuild them
-  and check that the measurement is the one they get.
-- **That the platform is patched.** A chip running vulnerable firmware still
-  gets a valid VCEK. Firmware currency is policy, so it is a caller's decision:
-  pass `tcbFloor` to set one, and raise it when AMD publishes an advisory.
+A measurement identifies which image booted, not what that image does. To check
+that, rebuild it from source and compare:
+[VERIFYING.md](https://github.com/Libertai/confidential-inference/blob/main/VERIFYING.md).
 
-## Discovery
+## Node only
 
-`connect({ model })` reads a manifest published as a signed Aleph aggregate:
-
-```json
-{
-  "source_repo": "https://github.com/Libertai/confidential-inference",
-  "models": {
-    "qwen3.8-27b-tee": {
-      "deployments": [
-        { "item_hash": "<v-program item hash>", "source_commit": "<commit of source_repo>", "status": "active" }
-      ]
-    }
-  }
-}
-```
-
-No node is trusted along the way. The manifest is verified against the
-publisher's signature; each `item_hash` names a V-PROGRAM message whose content
-the client re-hashes, and the measurements come from there. Which machine runs
-it and at which address are hints from an untrusted scheduler — point a client
-at the wrong host and attestation fails.
-
-Revoking a deployment means deleting the V-PROGRAM, not just marking it
-deprecated: a client can be served a stale manifest, but it cannot be served a
-running enclave that no longer exists.
-
-Use `connect({ itemHash })` to pin one deployment and skip discovery entirely.
-
-## One implementation of the checks
-
-Hashing, signature recovery and report verification live in a Rust core
-compiled to WebAssembly, which this package wraps. A second client -- Python,
-or a browser build -- wraps the same binary rather than reimplementing the
-rules, so there is nothing for the implementations to disagree about.
-
-## Node only, for now
-
-Verification needs the peer's certificate before any request is sent, which
-needs a TLS API browsers do not expose. The verification core is compiled to
-WebAssembly and runs anywhere; the transport is what is Node-specific. A browser
-client needs either a local verifying proxy or a TLS stack in WASM over
-WebTransport.
-
-## Tests
-
-`npm test` runs offline against a certificate captured from a live deployment
-and the VCEK AMD issued for that chip, so no test touches the network. Setting
-`LIBERTAI_ITEM_HASH` adds one that connects for real.
+Reading the certificate before any request goes out needs a TLS API that
+browsers do not expose. A browser would need a local verifying proxy, or a TLS
+stack in WebAssembly over WebTransport.
