@@ -170,7 +170,9 @@ if [ ! -f "$gw" ]; then
     override=()
     [ "$MODELS_REV" = "$LOCKED_REV" ] ||
         override=(--override-input libertai-models "github:Libertai/libertai-models/$MODELS_REV")
-    cp "$(nix build --no-link --print-out-paths "${override[@]}" "$here#gateway-$ALIAS")" "$gw"
+    # The attribute name is quoted because an alias contains dots, and nix
+    # splits an unquoted attribute path on them.
+    cp "$(nix build --no-link --print-out-paths "${override[@]}" "$here#\"gateway-$ALIAS\"")" "$gw"
     chmod 644 "$gw"
 fi
 
