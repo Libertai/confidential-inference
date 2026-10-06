@@ -14,13 +14,13 @@ The first identifies the enclave. The second tells you what is inside it.
 ```python
 from libertai_confidential import connect
 
-tee = connect(item_hash="66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb")
+tee = connect(item_hash="99e3274fdc1c9c9aa23f94633113dc96840e28735cb3e7ccd7cfc54d517af8a5")
 print(tee.base_url, tee.measurement)
 ```
 
 ```js
 import { connect } from "@libertai/confidential-inference";
-const tee = await connect({ itemHash: "66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb" });
+const tee = await connect({ itemHash: "99e3274fdc1c9c9aa23f94633113dc96840e28735cb3e7ccd7cfc54d517af8a5" });
 ```
 
 Either call fails unless every check passes. The deployment message is
@@ -99,7 +99,7 @@ reaches one it can verify.
 
 | Model | Item hash | Source commit | Shape |
 | --- | --- | --- | --- |
-| `qwen3.8-27b-tee` | `66871efa64d1f42ffd43c88670f6930397d5992bdb78910dc4ff708f45b5c7bb` | `3f9a774` | 16 vCPU, 32 GiB, 1× H200 (`10de:233b`) in CC mode |
+| `qwen3.8-27b-tee` | `99e3274fdc1c9c9aa23f94633113dc96840e28735cb3e7ccd7cfc54d517af8a5` | `904b51d` | 16 vCPU, 32 GiB, 1× H200 (`10de:233b`) in CC mode |
 
 Each deployment publishes its own launch measurements, since the verity salt is
 random per publish; they are in the V-PROGRAM message, which is what the clients
