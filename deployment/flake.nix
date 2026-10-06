@@ -47,7 +47,7 @@
       backendUrl = "https://inference.api.libertai.io";
       # The API key verification key. Public by definition, so baking it into a
       # measured image loses nothing and makes it auditable.
-      apiPublicKey = "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE2ZFk1cUxsTThWdGp3MXB3MGswWAp5QlJDdUlMaXZZZU9tVTc2S3JGMWRUUmpIbEQ2U3ZCeVYrc1dVOEZ0OWlTOWlGWGhhVWtLWXlxdmV0TEhjMVJrCm05bktUbjJqQUdNeHM1UXl1NEdRWEdzL0dXd1Z2b0l0Rjl5MGV4MWZ2TG1sRnVGV0RqTFhWNlNRZ3Y0SEFtbFgKTFFrOG9KdmFBSUV6MENER3lnQ3BOTGpQS3hRTVlpSU1taHV2N2tIL1dKczlUNXFaUkJYYmVNNVF2YVhqcjRNYQpPblM1My80TFBpZTgzejBCWk13ZEFCNEI4NHFLZnVtMUxPT1Bva0QvWWwrSlNvSm5iZUhEcmtFZHN5TVBRdDNrCmx2aE9WVm0zeEdYdXVoZmVqQXZTTXFwSW53bnFmRFhQVmRheE1QWmNmZXdpdDlvdUo1ZEtyZWJTaGtQaTlFOC8KbHdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg";
+      apiPublicKey = "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE2ZFk1cUxsTThWdGp3MXB3MGswWAp5QlJDdUlMaXZZZU9tVTc2S3JGMWRUUmpIbEQ2U3ZCeVYrc1dVOEZ0OWlTOWlGWGhhVWtLWXlxdmV0TEhjMVJrCm05bktUbjJqQUdNeHM1UXl1NEdRWEdzL0dXd1Z2b0l0Rjl5MGV4MWZ2TG1sRnVGV0RqTFhWNlNRZ3Y0SEFtbFgKTFFrOG9KdmFBSUV6MENER3lnQ3BOTGpQS3hRTVlpSU1taHV2N2tIL1dKczlUNXFaUkJYYmVNNVF2YVhqcjRNYQpPblM1My80TFBpZTgzejBCWk13ZEFCNEI4NHFLZnVtMUxPT1Bva0QvWWwrSlNvSm5iZUhEcmtFZHN5TVBRdDNrCmx2aE9WVm0zeEdYdXVoZmVqQXZTTXFwSW53bnFmRFhQVmRheE1QWmNmZXdpdDlvdUo1ZEtyZWJTaGtQaTlFOC8KbHdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==";
 
       # Every ext4 here feeds a dm-verity root hash that ends up in the SEV-SNP
       # launch measurement, so the bytes must be reproducible or nobody can
@@ -77,6 +77,8 @@
           SOURCE_DATE_EPOCH = "0";
         }
         ''
+          printf %s "${apiPublicKey}" | base64 -d > /dev/null ||
+            { echo "apiPublicKey is not valid base64"; exit 1; }
           mkdir -p tree/nix/store tree/opt/libertai-models/data tree/bin
           for p in $(cat ${pythonClosure}/store-paths); do cp -a "$p" tree/nix/store/; done
           ln -s ${pythonEnv}/bin/python tree/bin/python

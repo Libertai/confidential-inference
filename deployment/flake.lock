@@ -3,11 +3,11 @@
     "libertai-models": {
       "flake": false,
       "locked": {
-        "lastModified": 1788623538,
-        "narHash": "sha256-eof/MfCmGOC097ExtqDa/LEsDyrkU9EAPGkL1l/d+tg=",
+        "lastModified": 1791288319,
+        "narHash": "sha256-bpBWHMhxxKDKfB0Vfz37mNlm6t4pbgOAOyhvBI1o4xo=",
         "owner": "Libertai",
         "repo": "libertai-models",
-        "rev": "b403c1a5c873fcf7fa2170c2a6de825fdf59ed27",
+        "rev": "74dc2b46091604a27cd7b31fe26d6a49a7cbf078",
         "type": "github"
       },
       "original": {
