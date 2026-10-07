@@ -119,13 +119,3 @@ it matches without reading the lock file.
 
 Runtime bundle for all of them:
 `1a5ee478326730db94f8674d9756bbdcfbf52aa54953a081da42bcfe46308de1`.
-
-## Limits
-
-- A chip running vulnerable firmware still gets a valid VCEK, so firmware
-  currency is a policy decision the clients take from the caller as `tcbFloor`.
-- A deployment is revoked by deleting it, not by editing the manifest: a stale
-  manifest can be served to a client, but a deleted enclave cannot answer it.
-- Firmware, kernel and initrd come from the Aleph runtime bundle named above
-  rather than from this repository. Reproducing those is a question for
-  [aleph-vm](https://github.com/aleph-im/aleph-vm).
