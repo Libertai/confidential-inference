@@ -97,9 +97,12 @@ land in the image.
 can have several deployments at once; a client tries each active one until it
 reaches one it can verify.
 
+The item hash links to the signed deployment message on the Aleph explorer, and
+the source commit to the code its images were built from.
+
 | Model | Item hash | Source commit | Shape |
 | --- | --- | --- | --- |
-| `qwen3.8-27b-tee` | `9a34ee8d5353d121d667fe5de6d57082b64be8d48bf1f7e96c9b7c4b842c8589` | `0f28d0c` | 16 vCPU, 32 GiB, 1× H200 (`10de:233b`) in CC mode |
+| `qwen3.8-27b-tee` | [`9a34ee8d5353d121d667fe5de6d57082b64be8d48bf1f7e96c9b7c4b842c8589`](https://explorer.aleph.cloud/address/ETH/0x238224C744F4b90b4494516e074D2676ECfC6803/message/V-PROGRAM/9a34ee8d5353d121d667fe5de6d57082b64be8d48bf1f7e96c9b7c4b842c8589) | [`0f28d0c`](https://github.com/Libertai/confidential-inference/commit/0f28d0c) | 16 vCPU, 32 GiB, 1× H200 (`10de:233b`) in CC mode |
 
 Each deployment publishes its own launch measurements, since the verity salt is
 random per publish; they are in the V-PROGRAM message, which is what the clients
