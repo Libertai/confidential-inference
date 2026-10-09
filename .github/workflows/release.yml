@@ -65,7 +65,11 @@ jobs:
           pattern: "{wheels-*,sdist}"
           merge-multiple: true
           path: dist
+      # A re-run after a half-failed release must not fail here on a version
+      # PyPI already has: the point of the re-run is the half that did not land.
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
 
   npm:
     runs-on: ubuntu-latest
