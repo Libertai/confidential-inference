@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Publish the deployment manifest as a signed Aleph aggregate.
+"""Check a deployment manifest before, or after, it is published.
 
-    python scripts/publish_manifest.py manifest.json            # check only
-    python scripts/publish_manifest.py manifest.json --publish
+    python scripts/check_manifest.py                 # the published aggregate
+    python scripts/check_manifest.py candidate.json  # a draft, before publishing
 
-Publishing is what makes `connect(model=...)` work, and it is the one step a
-client cannot second-guess: a client checks that the manifest was signed by the
-expected address, not that what it says is true. So everything checkable is
-checked here first, and nothing is published unless it all holds:
+The manifest lives in the signed Aleph aggregate, not in this repository, so
+there is one copy and it cannot drift. Publish it with the CLI:
+
+    aleph aggregate create --key confidential-inference --content "$(cat candidate.json)"
+
+A client checks that the manifest was signed by the expected address, not that
+what it says is true, so everything checkable is checked here:
 
   * every `source_commit` is a commit of this repository, since a client is told
     to check it out,
@@ -22,7 +25,6 @@ enclave that no longer exists.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import subprocess
 import sys
@@ -31,10 +33,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "python"))
 
-from libertai_confidential import connect, resolve_deployment  # noqa: E402
-from libertai_confidential.manifest import AGGREGATE_KEY  # noqa: E402
-
-CCN = "https://api3.aleph.im"
+from libertai_confidential import connect, fetch_manifest, resolve_deployment  # noqa: E402
 
 
 def check(manifest: dict) -> list[str]:
@@ -75,37 +74,27 @@ def check(manifest: dict) -> list[str]:
     return problems
 
 
-async def publish(manifest: dict) -> None:
-    from aleph.sdk.chains.ethereum import ETHAccount
-    from aleph.sdk.client import AuthenticatedAlephHttpClient
-    from aleph.sdk.conf import settings
-
-    account = ETHAccount(Path(settings.PRIVATE_KEY_FILE).read_bytes())
-    print(f"publishing as {account.get_address()}")
-    async with AuthenticatedAlephHttpClient(account=account, api_server=CCN) as client:
-        message, status = await client.create_aggregate(
-            key=AGGREGATE_KEY, content=manifest, inline=True
-        )
-        print(f"{status}: {message.item_hash}")
-
-
 def main() -> int:
-    path = Path(sys.argv[1] if len(sys.argv) > 1 else "manifest.json")
-    manifest = json.loads(path.read_text())
+    if len(sys.argv) > 1:
+        source = Path(sys.argv[1])
+        manifest = json.loads(source.read_text())
+        print(f"checking {source}")
+    else:
+        source = "the published aggregate"
+        manifest = fetch_manifest()
+        if manifest is None:
+            print("nothing published under this key yet", file=sys.stderr)
+            return 1
+        print(f"checking {source}")
 
-    print(f"checking {path}")
     problems = check(manifest)
     if problems:
-        print("\nnot publishable:")
-        for p in problems:
-            print(f"  - {p}")
+        print()
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
         return 1
-    print("\nevery deployment checks out")
-
-    if "--publish" not in sys.argv:
-        print("re-run with --publish to sign and publish it")
-        return 0
-    asyncio.run(publish(manifest))
+    print()
+    print("every deployment checks out")
     return 0
 
 

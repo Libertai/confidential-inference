@@ -78,14 +78,8 @@ def main() -> int:
             shutil.copyfile(first / name, other / name)
         print(f"updated {other.relative_to(REPO)}")
 
-    manifest_path = REPO / "manifest.json"
-    manifest = json.loads(manifest_path.read_text())
-    for entry in manifest["models"].values():
-        for deployed in entry["deployments"]:
-            if deployed["status"] == "active":
-                deployed["item_hash"] = item_hash
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
-    print("updated manifest.json")
+    print(f"manifest not touched: it lives in the aggregate, publish {item_hash[:12]} with")
+    print("  aleph aggregate create --key confidential-inference --content \"$(cat candidate.json)\"")
     return 0
 
 

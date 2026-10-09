@@ -93,9 +93,17 @@ land in the image.
 
 ## Deployments
 
-`manifest.json` is the list, and it is what `connect(model=...)` reads. A model
-can have several deployments at once; a client tries each active one until it
-reaches one it can verify.
+The list lives in an Aleph aggregate signed by LibertAI, which is what
+`connect(model=...)` reads — there is no copy in this repository to drift from
+it. Read it yourself with:
+
+```bash
+aleph aggregate get confidential-inference \
+  --address 0x238224C744F4b90b4494516e074D2676ECfC6803
+```
+
+A model can have several deployments at once; a client tries each active one
+until it reaches one it can verify.
 
 The item hash links to the signed deployment message on the Aleph explorer, and
 the source commit to the code its images were built from.
