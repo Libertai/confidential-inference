@@ -4,7 +4,7 @@ established what it is.
     from openai import OpenAI
     from libertai_confidential import connect
 
-    tee = connect(model="qwen3.8-27b")
+    tee = connect(model="qwen3.8-27b-tee")
     client = OpenAI(api_key=key, base_url=tee.base_url, http_client=tee.http_client)
 
 The client talks to the enclave directly. Nothing in between can read the

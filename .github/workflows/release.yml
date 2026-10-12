@@ -78,8 +78,7 @@ jobs:
     environment: release
     permissions:
       id-token: write # OIDC, for trusted publishing
-      # Naming any permission zeroes the rest, and checkout needs to read a
-      # private repository.
+      # Naming any permission zeroes the rest, and checkout still needs read.
       contents: read
     steps:
       - uses: actions/checkout@v7
